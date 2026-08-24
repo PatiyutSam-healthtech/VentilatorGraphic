@@ -10,10 +10,12 @@
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); max-width: 1250px; margin: auto; display: flex; flex-direction: column; align-items: center; position: relative; }
 
         .header-box { display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 20px; position: relative; }
-        .hospital-logo { height: 70px; position: absolute; left: 10px; }
+        .hospital-logo { height: 70px; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); }
         .header-text { display: flex; flex-direction: column; align-items: center; }
         .header-title { color: #2c3e50; margin: 0 0 5px 0; font-size: 26px; font-weight: 700; }
         .subtitle { color: #7f8c8d; font-size: 15px; margin: 0; }
+        .header-buttons { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+        .header-buttons .top-btn { flex: 1 1 150px; }
 
         .top-btn { cursor: pointer; border: none; font-weight: bold; padding: 8px 16px; font-size: 14px; border-radius: 6px; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); color: white; }
         .top-btn:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -72,6 +74,17 @@
         .save-status-line.err { color: #c0392b; }
         .backup-link { display: inline-block; margin-top: 10px; background: #34495e; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; }
         .backup-link:hover { background: #2c3e50; }
+
+        /* จอมือถือแนวตั้ง: จัดโลโก้ให้อยู่เหนือหัวข้อแทนการวางซ้อนด้านข้าง เพื่อไม่ให้ทับกับหัวข้อ/subtitle ที่ตัดบรรทัด */
+        @media (max-width: 480px) {
+            body { padding: 10px; }
+            .container { padding: 15px; }
+            .header-box { flex-direction: column; }
+            .hospital-logo { position: static; transform: none; height: 55px; margin-bottom: 8px; }
+            .header-title { font-size: 20px; }
+            .subtitle { font-size: 13px; padding: 0 10px; }
+            .header-buttons .top-btn { flex: 1 1 100%; }
+        }
     </style>
 </head>
 <body>
@@ -83,7 +96,7 @@
                 <h2 class="header-title">VENTILATOR GRAPHICS SIMULATOR</h2>
                 <div class="subtitle">Advanced Clinical & Asynchrony Module | พัฒนาโดย นายปฏิยุทธ์ อุปพงษ์</div>
 
-                <div style="margin-top: 12px; display: flex; gap: 10px; justify-content: center;">
+                <div class="header-buttons">
                     <button class="top-btn btn-guide" onclick="openGuide()">📖 คู่มือการใช้งาน</button>
                     <button id="examModeBtn" class="top-btn btn-exam" onclick="openExamSetup()">🎓 เข้าสู่โหมดทดสอบ</button>
                     <button id="resetBtn" class="top-btn btn-reset" onclick="resetApp()">🔄 กลับสู่โหมดจำลอง (Reset)</button>
