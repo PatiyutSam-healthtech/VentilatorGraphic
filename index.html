@@ -10,7 +10,7 @@
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); max-width: 1250px; margin: auto; display: flex; flex-direction: column; align-items: center; position: relative; }
 
         .header-box { display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 20px; position: relative; }
-        .hospital-logo { height: 70px; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); }
+        .clinic-logo-large { display: block; height: 90px; margin: 0 auto 12px auto; }
         .header-text { display: flex; flex-direction: column; align-items: center; }
         .header-title { color: #2c3e50; margin: 0 0 5px 0; font-size: 26px; font-weight: 700; }
         .subtitle { color: #7f8c8d; font-size: 15px; margin: 0; }
@@ -79,8 +79,7 @@
         @media (max-width: 480px) {
             body { padding: 10px; }
             .container { padding: 15px; }
-            .header-box { flex-direction: column; }
-            .hospital-logo { position: static; transform: none; height: 55px; margin-bottom: 8px; }
+            .clinic-logo-large { height: 65px; }
             .header-title { font-size: 20px; }
             .subtitle { font-size: 13px; padding: 0 10px; }
             .header-buttons .top-btn { flex: 1 1 100%; }
@@ -91,7 +90,6 @@
 
     <div class="container">
         <div class="header-box">
-            <img src="https://lh3.googleusercontent.com/d/1DlsLtw43ZhgFrmvjS6ySFH4EmSwuS0tk" alt="Hospital Logo" class="hospital-logo">
             <div class="header-text">
                 <h2 class="header-title">VENTILATOR GRAPHICS SIMULATOR</h2>
                 <div class="subtitle">Advanced Clinical & Asynchrony Module | พัฒนาโดย นายปฏิยุทธ์ อุปพงษ์</div>
@@ -106,6 +104,7 @@
 
         <div class="main-display">
             <div class="clinical-panel">
+                <img src="https://lh3.googleusercontent.com/d/1DlsLtw43ZhgFrmvjS6ySFH4EmSwuS0tk" alt="Hospital Logo" class="clinic-logo-large">
                 <div class="clinical-title">🏥 Patient Monitor</div>
 
                 <div class="bed-scene">
