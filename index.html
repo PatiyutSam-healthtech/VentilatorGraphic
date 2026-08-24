@@ -9,9 +9,9 @@
         body { font-family: 'Sarabun', sans-serif; background-color: #1a252f; text-align: center; padding: 20px; margin: 0; color: #333; }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); max-width: 1250px; margin: auto; display: flex; flex-direction: column; align-items: center; position: relative; }
 
-        .header-box { display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 10px; position: relative; }
-        .clinical-column { display: flex; flex-direction: column; align-items: center; }
-        .clinic-logo-large { display: block; height: 90px; margin-bottom: 8px; }
+        .header-box { display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 150px; position: relative; }
+        .clinical-column { position: relative; }
+        .clinic-logo-large { display: block; position: absolute; bottom: calc(100% + 15px); left: 50%; transform: translateX(-50%); height: 130px; }
         .header-text { display: flex; flex-direction: column; align-items: center; }
         .header-title { color: #2c3e50; margin: 0 0 5px 0; font-size: 26px; font-weight: 700; }
         .subtitle { color: #7f8c8d; font-size: 15px; margin: 0; }
@@ -80,7 +80,8 @@
         @media (max-width: 480px) {
             body { padding: 10px; }
             .container { padding: 15px; }
-            .clinic-logo-large { height: 65px; }
+            .header-box { margin-bottom: 95px; }
+            .clinic-logo-large { height: 75px; }
             .header-title { font-size: 20px; }
             .subtitle { font-size: 13px; padding: 0 10px; }
             .header-buttons .top-btn { flex: 1 1 100%; }
