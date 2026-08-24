@@ -200,6 +200,7 @@
                     <option value="scoop_severe">Pressure Scooped out (Severe)</option>
                     <option value="prolong">ฝืนหายใจออก (Prolonged Ti)</option>
                 </select>
+                <button id="resetGraphBtn" class="top-btn" style="background:#95a5a6; width:100%; margin-top: 12px;" onclick="resetGraphOnly()">🔄 รีเซ็ตกราฟ (Reset)</button>
             </div>
 
             <!-- ปุ่ม Intervention สำหรับแก้ปัญหา -->
@@ -227,7 +228,7 @@
                 <label for="piSlider">Pressure</label>
                 <div class="ppeak-badge" id="ppeakDisplay">Ppeak: 20</div>
                 <div class="digital-value" id="piVal">15</div>
-                <input type="range" id="piSlider" min="5" max="30" value="15" oninput="document.getElementById('piVal').innerText = this.value; initAudioContext();">
+                <input type="range" id="piSlider" min="5" max="30" value="15" oninput="document.getElementById('piVal').innerText = this.value; checkAutoAsynchrony(); switchPatientVideo(); initAudioContext();">
             </div>
 
             <div class="control-group">
@@ -281,6 +282,7 @@
 
             <div id="saveStatusLine" class="save-status-line"></div>
             <a id="backupDownloadLink" class="backup-link" style="display:none;" href="#" download="exam_backup.json">💾 ดาวน์โหลดผลสอบสำรอง</a>
+            <button id="exportPdfBtn" class="top-btn" style="display:none; background:#c0392b; width:100%; margin-top: 10px;" onclick="exportResultPDF()">📄 พิมพ์ / บันทึกผลสอบเป็น PDF</button>
 
             <button id="nextQuestionBtn" class="top-btn btn-exam" style="margin-top: 20px; width: 100%; font-size: 16px; padding: 10px;" onclick="loadNextQuestion()">ข้อถัดไป ➡️</button>
         </div>
@@ -364,6 +366,7 @@
         let examScore = 0;
         let examQuestions = [];
         let examDetailsLog = [];
+        let examDetailsData = []; // ข้อมูลแบบมีโครงสร้างของแต่ละข้อ ใช้สำหรับสร้างรายงาน PDF พร้อมเฉลย
         let studentData = {};
         let currentSubmissionId = null;
 
@@ -433,9 +436,8 @@
             actionTaken = type;
 
             if (currentExamType === 'none') {
-                let drop = document.getElementById('abnormalSelect');
-                if (type === 'suction' && drop.value === 'sawtooth') drop.value = 'normal';
-                if (type === 'fix_leak' && drop.value === 'auto_trigger') drop.value = 'normal';
+                // ใช้ตรรกะเดียวกับโหมดสอบปฏิบัติ: ถ้าการพยาบาลนี้แก้ปัญหาที่กำลังเลือกอยู่ได้ ให้กราฟกลับเป็นปกติทันที
+                checkAutoAsynchrony();
                 switchPatientVideo();
             }
         }
@@ -512,7 +514,9 @@
             currentQIndex = 0;
             examScore = 0;
             examDetailsLog = [];
+            examDetailsData = [];
             currentSubmissionId = null;
+            document.getElementById('exportPdfBtn').style.display = 'none';
 
             document.getElementById('examSetupModal').style.display = 'none';
             document.getElementById('guidelineSection').style.display = 'none';
@@ -575,20 +579,26 @@
             switchPatientVideo();
         }
 
-        function checkPracticalFixed(q) {
+        // ฟังก์ชันกลาง เช็คว่า "ภาวะผิดปกติ" ถูกแก้ไขแล้วหรือยัง จากค่าพารามิเตอร์/การพยาบาลปัจจุบัน
+        // ใช้ร่วมกันทั้งโหมดสอบปฏิบัติ และโหมดจำลอง (สอน) เพื่อให้ผู้สอนปรับพารามิเตอร์แก้ไขกราฟได้เช่นเดียวกับผู้เข้าสอบ
+        function isAbnormalResolved(abnormalId) {
             let rr = parseInt(document.getElementById('rrSlider').value);
             let ti = parseFloat(document.getElementById('tiSlider').value);
             let pi = parseInt(document.getElementById('piSlider').value);
             let te = (60/rr) - ti;
 
-            if (q.id === 'autopeep' && te >= 0.65) return true;
-            if (q.id === 'prolong' && ti < 2.0) return true;
-            if (q.id === 'double_trigger' && (pi >= 20 || ti >= 1.2)) return true;
-            if (q.id === 'premature_cycle' && ti >= 1.0) return true;
-            if (q.id === 'scoop_mild' && pi >= 20) return true;
-            if (q.id === 'sawtooth' && actionTaken === 'suction') return true;
-            if (q.id === 'auto_trigger' && actionTaken === 'fix_leak') return true;
+            if (abnormalId === 'autopeep' && te >= 0.65) return true;
+            if (abnormalId === 'prolong' && ti < 2.0) return true;
+            if (abnormalId === 'double_trigger' && (pi >= 20 || ti >= 1.2)) return true;
+            if (abnormalId === 'premature_cycle' && ti >= 1.0) return true;
+            if (abnormalId === 'scoop_mild' && pi >= 20) return true;
+            if (abnormalId === 'sawtooth' && actionTaken === 'suction') return true;
+            if (abnormalId === 'auto_trigger' && actionTaken === 'fix_leak') return true;
             return false;
+        }
+
+        function checkPracticalFixed(q) {
+            return isAbnormalResolved(q.id);
         }
 
         function checkAnswer() {
@@ -624,6 +634,15 @@
             }
 
             examDetailsLog.push(`ข้อ ${currentQIndex+1}: [โจทย์: ${actualName}] -> [ผล: ${studentActionLog}]`);
+
+            examDetailsData.push({
+                no: currentQIndex + 1,
+                question: actualName,
+                studentAnswer: studentActionLog.replace(/^✅ |^❌ /, ''),
+                isCorrect: isCorrect,
+                solution: q.solution
+            });
+
             if (isCorrect) examScore++;
 
             const titleEl = document.getElementById('answerTitle');
@@ -642,6 +661,7 @@
             document.getElementById('saveStatusLine').innerText = '';
             document.getElementById('saveStatusLine').className = 'save-status-line';
             document.getElementById('backupDownloadLink').style.display = 'none';
+            document.getElementById('exportPdfBtn').style.display = 'none';
 
             let nextBtn = document.getElementById('nextQuestionBtn');
             nextBtn.disabled = false;
@@ -683,6 +703,7 @@
 
             document.getElementById('answerDetailsBox').style.display = 'none';
             document.getElementById('backupDownloadLink').style.display = 'none';
+            document.getElementById('exportPdfBtn').style.display = 'block';
 
             let nextBtn = document.getElementById('nextQuestionBtn');
             nextBtn.innerText = "กำลังบันทึกผลสอบ...";
@@ -773,6 +794,88 @@
             }
         }
 
+        // สร้างรายงานผลสอบพร้อมเฉลยในหน้าต่างใหม่ แล้วเปิดหน้าต่างพิมพ์ของเบราว์เซอร์ให้ผู้ใช้เลือก "บันทึกเป็น PDF"
+        // ใช้วิธีนี้แทนไลบรารีสร้าง PDF โดยตรง เพื่อให้แสดงผลภาษาไทยได้ถูกต้องแน่นอนผ่าน font ของเบราว์เซอร์เอง
+        function exportResultPDF() {
+            const win = window.open('', '_blank');
+            if (!win) {
+                alert('เบราว์เซอร์บล็อกป๊อปอัพ กรุณาอนุญาตป๊อปอัพสำหรับเว็บนี้ แล้วลองกดดาวน์โหลด PDF อีกครั้ง');
+                return;
+            }
+
+            const examTypeName = (currentExamType === 'theory') ? 'สอบทฤษฎี (วิเคราะห์กราฟ)' : 'สอบปฏิบัติ (แก้ไขสถานการณ์)';
+            const dateStr = new Date().toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' });
+
+            let rowsHtml = examDetailsData.map(function (d) {
+                return `
+                    <tr>
+                        <td style="text-align:center;">${d.no}</td>
+                        <td>${d.question}</td>
+                        <td style="text-align:center; color:${d.isCorrect ? '#27ae60' : '#c0392b'}; font-weight:bold;">${d.isCorrect ? 'ถูกต้อง ✅' : 'ไม่ถูกต้อง ❌'}</td>
+                        <td>${d.studentAnswer}</td>
+                        <td>${d.solution}</td>
+                    </tr>`;
+            }).join('');
+
+            const html = `<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>ผลสอบ - ${studentData.name || ''}</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+    body { font-family: 'Sarabun', sans-serif; color:#2c3e50; padding: 30px; }
+    h1 { text-align:center; color:#2c3e50; margin-bottom: 4px; }
+    .subtitle { text-align:center; color:#7f8c8d; margin-bottom: 20px; }
+    .info-box { display:flex; flex-wrap:wrap; gap: 8px 30px; background:#f8f9fa; border:1px solid #dcdde1; border-radius:8px; padding: 15px 20px; margin-bottom: 20px; }
+    .info-box div { font-size: 14px; }
+    .score-box { text-align:center; font-size: 22px; font-weight: bold; color:#27ae60; margin-bottom: 20px; }
+    table { width:100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border: 1px solid #dcdde1; padding: 8px 10px; vertical-align: top; }
+    th { background:#34495e; color:white; }
+    tr:nth-child(even) { background:#f8f9fa; }
+    @media print { body { padding: 10px; } }
+</style>
+</head>
+<body>
+    <h1>รายงานผลการทดสอบ Ventilator Graphics Simulator</h1>
+    <div class="subtitle">${examTypeName} | ออกรายงานเมื่อ ${dateStr}</div>
+
+    <div class="info-box">
+        <div><b>ชื่อ-สกุล:</b> ${studentData.name || '-'}</div>
+        <div><b>หน่วยงาน:</b> ${studentData.department || '-'}</div>
+        <div><b>โรงพยาบาล:</b> ${studentData.hospital || '-'}</div>
+        <div><b>อายุงาน:</b> ${studentData.experience || '-'} ปี</div>
+    </div>
+
+    <div class="score-box">คะแนนที่ได้: ${examScore} / ${examQuestions.length}</div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width:5%;">ข้อ</th>
+                <th style="width:22%;">โจทย์ / สถานการณ์</th>
+                <th style="width:12%;">ผล</th>
+                <th style="width:26%;">คำตอบ / การแก้ไขของผู้เข้าสอบ</th>
+                <th style="width:35%;">เฉลย และเหตุผลที่ถูกต้อง</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${rowsHtml}
+        </tbody>
+    </table>
+</body>
+</html>`;
+
+            win.document.open();
+            win.document.write(html);
+            win.document.close();
+
+            win.onload = function () {
+                setTimeout(function () { win.focus(); win.print(); }, 300);
+            };
+        }
+
         function handleModeFlowChange() {
             initAudioContext();
             const mode = document.getElementById('modeSelect').value;
@@ -799,11 +902,34 @@
             let dropdown = document.getElementById('abnormalSelect');
             let currentState = dropdown.value;
 
+            // ถ้าผู้สอนกำลังจำลองภาวะผิดปกติที่แก้ไขได้ด้วยพารามิเตอร์/การพยาบาลอยู่ และแก้ไขสำเร็จแล้ว ให้กราฟกลับเป็นปกติทันที
+            // (ใช้ตรรกะเดียวกับที่ผู้เข้าสอบใช้ในโหมดสอบปฏิบัติ)
+            if (currentState !== 'normal' && isAbnormalResolved(currentState)) {
+                dropdown.value = 'normal';
+                currentState = 'normal';
+            }
+
             if (currentState === 'normal' || currentState === 'autopeep' || currentState === 'prolong') {
                 if (teTimeSec < 0.65) { dropdown.value = 'autopeep'; }
                 else if (rr <= 15 && tiSetting >= 2.0) { dropdown.value = 'prolong'; }
                 else { dropdown.value = 'normal'; }
             }
+        }
+
+        function resetGraphOnly() {
+            // ปุ่มรีเซ็ตกราฟด่วนสำหรับโหมดจำลอง (ไม่กระทบข้อมูลโหมดสอบ)
+            if (currentExamType !== 'none') return;
+            initAudioContext();
+            actionTaken = '';
+            document.getElementById('modeSelect').value = 'pcv';
+            document.getElementById('flowSelect').value = 'decel';
+            document.getElementById('abnormalSelect').value = 'normal';
+            document.getElementById('rrSlider').value = 15; document.getElementById('rrVal').innerText = '15';
+            document.getElementById('tiSlider').value = 1.0; document.getElementById('tiVal').innerText = '1.0';
+            document.getElementById('piSlider').value = 15; document.getElementById('piVal').innerText = '15';
+            document.getElementById('peepSlider').value = 5; document.getElementById('peepVal').innerText = '5';
+            document.getElementById('slopeSlider').value = 0; document.getElementById('slopeVal').innerText = '0';
+            switchPatientVideo(true);
         }
 
         function resetApp() {
@@ -814,6 +940,8 @@
             }
 
             currentExamType = 'none';
+            actionTaken = '';
+            examDetailsData = [];
             document.getElementById('examRunningSection').style.display = 'none';
             document.getElementById('guidelineSection').style.display = 'block';
             document.getElementById('abnormalControlGroup').style.display = 'flex';
@@ -821,6 +949,7 @@
             document.getElementById('examModeBtn').style.display = 'block';
             document.getElementById('answerModal').style.display = 'none';
             document.getElementById('backupDownloadLink').style.display = 'none';
+            document.getElementById('exportPdfBtn').style.display = 'none';
             setSaveStatus('', '');
 
             toggleSliders(false);
@@ -852,7 +981,7 @@
         function openGuide() { document.getElementById('guideModal').style.display = 'block'; }
         function closeGuide() { document.getElementById('guideModal').style.display = 'none'; }
 
-        function switchPatientVideo() {
+        function switchPatientVideo(force) {
             const mode = document.getElementById('modeSelect').value;
             const flowType = document.getElementById('flowSelect').value;
             const abnormalState = document.getElementById('abnormalSelect').value;
@@ -864,7 +993,7 @@
                 else if (mode === 'psv' && flowType === 'decel') videoKey = 'over_assist';
             }
             let targetSrc = patientVideos[videoKey];
-            if (targetSrc && !videoEl.src.endsWith(targetSrc)) {
+            if (targetSrc && (force || !videoEl.src.endsWith(targetSrc))) {
                 videoEl.src = targetSrc;
                 videoEl.play().catch(e => {});
             }
