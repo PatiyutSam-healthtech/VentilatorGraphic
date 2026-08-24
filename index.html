@@ -165,7 +165,10 @@
                     <div id="topAlarmLight" class="alarm-indicator">
                         <span style="font-size: 16px;">🚨</span> ALARM
                     </div>
-                    <button id="muteBtn" onclick="toggleMute()" style="display:none; background: #7f8c8d; color: white; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">🔊 ปิดเสียงเตือน</button>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button id="markerToggleBtn" onclick="toggleMarkers()" style="background:#8e44ad; color:white; border:none; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.2);">🎯 ซ่อนลูกศร</button>
+                        <button id="muteBtn" onclick="toggleMute()" style="display:none; background: #7f8c8d; color: white; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">🔊 ปิดเสียงเตือน</button>
+                    </div>
                 </div>
 
                 <canvas id="ventCanvas" width="850" height="380"></canvas>
@@ -390,6 +393,7 @@
         let audioCtx = null;
         let alarmInterval = null;
         let isMuted = false;
+        let showMarkers = true;
         let isAlarmActive = false;
 
         function initAudioContext() {
@@ -418,6 +422,13 @@
             const btn = document.getElementById('muteBtn');
             btn.innerHTML = isMuted ? "🔇 ปิดเสียงแล้ว" : "🔊 ปิดเสียงเตือน";
             btn.style.backgroundColor = isMuted ? "#e74c3c" : "#7f8c8d";
+        }
+
+        function toggleMarkers() {
+            showMarkers = !showMarkers;
+            const btn = document.getElementById('markerToggleBtn');
+            btn.innerHTML = showMarkers ? "🎯 ซ่อนลูกศร" : "🎯 แสดงลูกศร";
+            btn.style.backgroundColor = showMarkers ? "#8e44ad" : "#7f8c8d";
         }
 
         function updateAlarmSystem(abnormalState, ppeakValue) {
@@ -1313,8 +1324,8 @@
             ctx.fillStyle = '#f1c40f'; ctx.font = '16px Arial'; ctx.fillText('Paw (cmH2O)', 10, 25);
             ctx.fillStyle = '#2ecc71'; ctx.fillText('Flow (L/min)', 10, 175);
 
-            // ชี้จุดผิดปกติด้วยลูกศร เฉพาะโหมดจำลอง/สอน (ไม่ใช่ระหว่างสอบ) เพื่อช่วยให้ผู้เรียนสังเกตกราฟได้ง่ายขึ้น
-            if (currentExamType === 'none' && abnormalMarkers[abnormal]) {
+            // ชี้จุดผิดปกติด้วยลูกศร เฉพาะโหมดจำลอง/สอน (ไม่ใช่ระหว่างสอบ) และเมื่อผู้ใช้เปิดการแสดงลูกศรไว้
+            if (showMarkers && currentExamType === 'none' && abnormalMarkers[abnormal]) {
                 abnormalMarkers[abnormal].forEach(function (marker) {
                     const mTime = marker.getTime(cycleLength, drawTiLength);
                     const mx = findMarkerX(mTime, cycleLength, xOffset, canvas.width);
