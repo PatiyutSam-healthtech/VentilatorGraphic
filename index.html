@@ -119,7 +119,7 @@
 
                         <!-- สำหรับสอบทฤษฎี -->
                         <div id="theoryExamUI" style="display: none;">
-                            <p style="color:#2c3e50; font-size: 13px; font-weight: bold; margin-bottom: 5px;">เลือกภาวะที่พบจากกราฟ (มี 10 ตัวเลือก):</p>
+                            <p style="color:#2c3e50; font-size: 13px; font-weight: bold; margin-bottom: 5px;">เลือกภาวะที่พบจากกราฟ (มี 9 ตัวเลือก):</p>
                             <select id="studentAnswer" style="margin-bottom: 10px;">
                                 <option value="normal">ปกติ (Normal / Synchronized)</option>
                                 <option value="autopeep">ลมค้าง (Auto-PEEP)</option>
@@ -130,7 +130,6 @@
                                 <option value="sawtooth">มีน้ำ/เสมหะในสาย (Sawtooth Pattern)</option>
                                 <option value="scoop_mild">Pressure Scooped out (Mild)</option>
                                 <option value="prolong">ฝืนหายใจออก (Prolonged Ti)</option>
-                                <option value="over_assist">ช่วยเหลือมากเกินไป (Over-assist)</option>
                             </select>
                         </div>
 
@@ -188,7 +187,6 @@
                     <option value="scoop_severe">Pressure Scooped out (Severe)</option>
                     <option value="prolong">ฝืนหายใจออก (Prolonged Ti)</option>
                 </select>
-                <button class="top-btn" style="background:#7f8c8d; width:100%; margin-top:10px;" onclick="resetGraphOnly()">↩️ Reset กราฟ (กลับปกติ)</button>
             </div>
 
             <!-- ปุ่ม Intervention สำหรับแก้ปัญหา -->
@@ -216,7 +214,7 @@
                 <label for="piSlider">Pressure</label>
                 <div class="ppeak-badge" id="ppeakDisplay">Ppeak: 20</div>
                 <div class="digital-value" id="piVal">15</div>
-                <input type="range" id="piSlider" min="5" max="30" value="15" oninput="document.getElementById('piVal').innerText = this.value; checkAutoAsynchrony(); switchPatientVideo(); initAudioContext();">
+                <input type="range" id="piSlider" min="5" max="30" value="15" oninput="document.getElementById('piVal').innerText = this.value; initAudioContext();">
             </div>
 
             <div class="control-group">
@@ -270,7 +268,6 @@
 
             <div id="saveStatusLine" class="save-status-line"></div>
             <a id="backupDownloadLink" class="backup-link" style="display:none;" href="#" download="exam_backup.json">💾 ดาวน์โหลดผลสอบสำรอง</a>
-            <button id="exportPdfBtn" class="top-btn" style="display:none; background:#c0392b; margin-top:10px; width:100%; padding:10px;" onclick="exportResultsPDF()">📄 ดาวน์โหลดผลสอบเป็น PDF (พร้อมเฉลย)</button>
 
             <button id="nextQuestionBtn" class="top-btn btn-exam" style="margin-top: 20px; width: 100%; font-size: 16px; padding: 10px;" onclick="loadNextQuestion()">ข้อถัดไป ➡️</button>
         </div>
@@ -288,7 +285,6 @@
                 <li>เลื่อนปรับแถบพารามิเตอร์ต่างๆ หรือเลือกความผิดปกติจากช่อง Asynchrony</li>
                 <li>สังเกตความเปลี่ยนแปลงของกราฟและอาการของผู้ป่วยจำลองผ่านหน้าจอ</li>
                 <li>อ่านคำอธิบายลักษณะกราฟและแนวทางการแก้ไขที่มุมซ้ายล่าง</li>
-                <li>หากต้องการสาธิตวิธีแก้ไข ให้ปรับ RR / Ti / Pressure ตามคำแนะนำ กราฟจะกลับเป็นปกติเองเมื่อค่าตั้งต้นเข้าเงื่อนไข หรือกดปุ่ม "Reset กราฟ" เพื่อกลับสู่ค่าปกติทันที</li>
             </ol>
 
             <h4 style="color: #2980b9; margin-bottom: 5px;">▶️ โหมดสอบทฤษฎี (วิเคราะห์กราฟ 10 ข้อ)</h4>
@@ -296,7 +292,7 @@
                 <li>กดปุ่มเข้าสู่โหมดทดสอบ กรอกข้อมูลผู้สอบ และเลือกโหมด "สอบทฤษฎี"</li>
                 <li>ระบบจะล็อกปุ่มตั้งค่าและสุ่มโจทย์กราฟขึ้นมาทีละข้อให้วิเคราะห์</li>
                 <li>เลือกคำตอบที่คิดว่าถูกต้องที่สุดจากเมนูตัวเลือก</li>
-                <li>กดปุ่มส่งคำตอบเพื่อดูเฉลย และทำข้อต่อไปจนครบ 10 ข้อ</li>
+                <li>กดปุ่มส่งคำตอบเพื่อดูเฉลย และทำข้อต่อไปจนครบทุกข้อ</li>
             </ol>
 
             <h4 style="color: #e67e22; margin-bottom: 5px;">▶️ โหมดสอบปฏิบัติ (แก้สถานการณ์ 10 ข้อ)</h4>
@@ -306,12 +302,9 @@
                 <li>ผู้สอบต้องทำการปรับเลื่อนแถบพารามิเตอร์ต่างๆ หรือกดปุ่มการพยาบาล เพื่อแก้ปัญหา</li>
                 <li>เมื่อปรับค่าจนกราฟกลับมาเป็นปกติ (Synchronized) ให้กดปุ่มส่งคำตอบ</li>
             </ol>
-            <p style="color: #c0392b; font-size: 13px; text-align: center; font-weight: bold; margin-top: 15px; border-top: 1px solid #ddd; padding-top: 10px;">*เมื่อทำข้อสอบครบ 10 ข้อ ข้อมูลผลการสอบและสถิติรายข้อจะถูกบันทึกลงฐานข้อมูลอัตโนมัติ และสามารถดาวน์โหลดผลสอบพร้อมเฉลยเป็น PDF ได้ทันที*</p>
+            <p style="color: #c0392b; font-size: 13px; text-align: center; font-weight: bold; margin-top: 15px; border-top: 1px solid #ddd; padding-top: 10px;">*เมื่อทำข้อสอบครบทุกข้อ ข้อมูลผลการสอบและสถิติรายข้อจะถูกบันทึกลงฐานข้อมูลอัตโนมัติ*</p>
         </div>
     </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <script>
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycby-AK6R3xHgk54HyFrTCe8t0cvq_yiCffDpA4pjVwmDqV12CGhi5tv2ur-OgxFmLqDi/exec";
@@ -336,8 +329,7 @@
             { id: 'trigger_fail', name: 'ไม่ตอบสนองแรงดูด (Trigger Failure)', solution: 'ปรับ Trigger sensitivity ให้ไวขึ้น หรือแก้ Auto-PEEP' },
             { id: 'sawtooth', name: 'มีน้ำ/เสมหะในสาย (Sawtooth Pattern)', solution: 'ทำการดูดเสมหะ (Suction) หรือเทน้ำทิ้ง' },
             { id: 'scoop_mild', name: 'Pressure Scooped out (Mild)', solution: 'เพิ่ม Pressure หรือ Flow ให้เพียงพอต่อความต้องการ' },
-            { id: 'prolong', name: 'ฝืนหายใจออก (Prolonged Ti)', solution: 'ลดเวลาหายใจเข้า (Ti) ให้สัมพันธ์กับผู้ป่วย' },
-            { id: 'over_assist', name: 'ช่วยเหลือมากเกินไป (Over-assist)', solution: 'ลดระดับ Pressure Support ลง' }
+            { id: 'prolong', name: 'ฝืนหายใจออก (Prolonged Ti)', solution: 'ลดเวลาหายใจเข้า (Ti) ให้สัมพันธ์กับผู้ป่วย' }
         ];
 
         // ตัด trigger_fail ออกจากโหมดปฏิบัติ ตามคำขอ
@@ -359,7 +351,6 @@
         let examScore = 0;
         let examQuestions = [];
         let examDetailsLog = [];
-        let examDetailsStructured = [];
         let studentData = {};
         let currentSubmissionId = null;
 
@@ -478,6 +469,22 @@
             return copy;
         }
 
+        // สร้างชุดข้อสอบให้ครบตามจำนวนที่ต้องการ (count) แม้ว่าคลังข้อสอบ (bank) จะมีจำนวนน้อยกว่า
+        // โดยจะสุ่มสลับคลังข้อสอบทีละรอบแล้วนำมาต่อกันจนครบ (วนซ้ำได้) และพยายามเลี่ยงไม่ให้ข้อเดิมมาซ้ำติดกันตรงรอยต่อของแต่ละรอบ
+        function buildExamQuestions(bank, count) {
+            let result = [];
+            while (result.length < count) {
+                let shuffled = shuffleArray(bank);
+                if (result.length > 0 && shuffled.length > 1 && result[result.length - 1].id === shuffled[0].id) {
+                    [shuffled[0], shuffled[1]] = [shuffled[1], shuffled[0]];
+                }
+                result = result.concat(shuffled);
+            }
+            return result.slice(0, count);
+        }
+
+        const EXAM_QUESTION_COUNT = 10;
+
         function startExam(type) {
             studentData.name = document.getElementById('studentName').value.trim();
             studentData.department = document.getElementById('department').value.trim();
@@ -492,7 +499,6 @@
             currentQIndex = 0;
             examScore = 0;
             examDetailsLog = [];
-            examDetailsStructured = [];
             currentSubmissionId = null;
 
             document.getElementById('examSetupModal').style.display = 'none';
@@ -503,12 +509,12 @@
             document.getElementById('examModeBtn').style.display = 'none';
 
             if (type === 'theory') {
-                examQuestions = shuffleArray(theoryScenarios);
+                examQuestions = buildExamQuestions(theoryScenarios, EXAM_QUESTION_COUNT);
                 document.getElementById('theoryExamUI').style.display = 'block';
                 document.getElementById('practicalExamUI').style.display = 'none';
                 toggleSliders(true);
             } else {
-                examQuestions = shuffleArray(practicalScenarios);
+                examQuestions = buildExamQuestions(practicalScenarios, EXAM_QUESTION_COUNT);
                 document.getElementById('theoryExamUI').style.display = 'none';
                 document.getElementById('practicalExamUI').style.display = 'block';
                 toggleSliders(false);
@@ -530,7 +536,7 @@
 
         function loadQuestionUI() {
             actionTaken = '';
-            document.getElementById('examCounter').innerText = "ข้อที่ " + (currentQIndex + 1) + " / 10";
+            document.getElementById('examCounter').innerText = "ข้อที่ " + (currentQIndex + 1) + " / " + examQuestions.length;
             document.getElementById('studentAnswer').value = 'normal';
 
             let q = examQuestions[currentQIndex];
@@ -556,24 +562,17 @@
             switchPatientVideo();
         }
 
-        // ---- Helper: ตรวจสอบว่าค่าพารามิเตอร์ปัจจุบัน (RR/Ti/Pressure) "แก้ไข" ภาวะผิดปกตินี้แล้วหรือยัง ----
-        // ใช้ร่วมกันทั้งในโหมดสอบปฏิบัติ และโหมดจำลอง (สอน) เพื่อให้ผู้สอนสาธิตการปรับแก้ได้เหมือนกัน
-        function checkFixedBySliders(id) {
+        function checkPracticalFixed(q) {
             let rr = parseInt(document.getElementById('rrSlider').value);
             let ti = parseFloat(document.getElementById('tiSlider').value);
             let pi = parseInt(document.getElementById('piSlider').value);
-            let te = (60 / rr) - ti;
+            let te = (60/rr) - ti;
 
-            if (id === 'autopeep' && te >= 0.65) return true;
-            if (id === 'prolong' && ti < 2.0) return true;
-            if (id === 'double_trigger' && (pi >= 20 || ti >= 1.2)) return true;
-            if (id === 'premature_cycle' && ti >= 1.0) return true;
-            if (id === 'scoop_mild' && pi >= 20) return true;
-            return false;
-        }
-
-        function checkPracticalFixed(q) {
-            if (checkFixedBySliders(q.id)) return true;
+            if (q.id === 'autopeep' && te >= 0.65) return true;
+            if (q.id === 'prolong' && ti < 2.0) return true;
+            if (q.id === 'double_trigger' && (pi >= 20 || ti >= 1.2)) return true;
+            if (q.id === 'premature_cycle' && ti >= 1.0) return true;
+            if (q.id === 'scoop_mild' && pi >= 20) return true;
             if (q.id === 'sawtooth' && actionTaken === 'suction') return true;
             if (q.id === 'auto_trigger' && actionTaken === 'fix_leak') return true;
             return false;
@@ -612,13 +611,6 @@
             }
 
             examDetailsLog.push(`ข้อ ${currentQIndex+1}: [โจทย์: ${actualName}] -> [ผล: ${studentActionLog}]`);
-            examDetailsStructured.push({
-                no: currentQIndex + 1,
-                scenario: actualName,
-                studentResult: studentActionLog,
-                isCorrect: isCorrect,
-                solution: q.solution
-            });
             if (isCorrect) examScore++;
 
             const titleEl = document.getElementById('answerTitle');
@@ -640,7 +632,7 @@
 
             let nextBtn = document.getElementById('nextQuestionBtn');
             nextBtn.disabled = false;
-            if (currentQIndex === 9) {
+            if (currentQIndex === examQuestions.length - 1) {
                 nextBtn.innerText = "ส่งกระดาษคำตอบ และดูคะแนนรวม";
                 nextBtn.style.backgroundColor = "#27ae60";
             } else {
@@ -655,7 +647,7 @@
             document.getElementById('answerModal').style.display = 'none';
             currentQIndex++;
 
-            if (currentQIndex < 10) {
+            if (currentQIndex < examQuestions.length) {
                 loadQuestionUI();
             } else {
                 finishExam();
@@ -674,11 +666,10 @@
 
             titleEl.innerHTML = "🎯 สอบเสร็จสิ้น!";
             titleEl.style.color = "#2c3e50";
-            feedbackEl.innerHTML = `คุณทำคะแนนได้: <span style="font-size:36px; color:#27ae60; display:block; margin-top:10px;">${examScore} / 10</span>`;
+            feedbackEl.innerHTML = `คุณทำคะแนนได้: <span style="font-size:36px; color:#27ae60; display:block; margin-top:10px;">${examScore} / ${examQuestions.length}</span>`;
 
             document.getElementById('answerDetailsBox').style.display = 'none';
             document.getElementById('backupDownloadLink').style.display = 'none';
-            document.getElementById('exportPdfBtn').style.display = 'block';
 
             let nextBtn = document.getElementById('nextQuestionBtn');
             nextBtn.innerText = "กำลังบันทึกผลสอบ...";
@@ -700,7 +691,7 @@
                 experience: studentData.experience,
                 examType: examTypeName,
                 score: examScore,
-                totalQuestions: 10,
+                totalQuestions: examQuestions.length,
                 details: examDetailsLog.join('\n')
             };
 
@@ -754,9 +745,7 @@
         function finalizeExamUI(result, payload) {
             let nextBtn = document.getElementById('nextQuestionBtn');
             nextBtn.disabled = false;
-            // สอบจบแล้วจริงๆ (ส่งคำตอบครบและพยายามบันทึกแล้ว) จึงกลับสู่โหมดจำลองได้ทันที
-            // โดยไม่ต้องถาม confirm ซ้ำ และบังคับให้กราฟ/วิดีโอกลับไปที่ PCV + Decelerating เสมอ
-            nextBtn.onclick = function () { resetApp(true); };
+            nextBtn.onclick = resetApp;
 
             if (result.ok) {
                 setSaveStatus("✅ " + result.message, "ok");
@@ -768,93 +757,6 @@
                 nextBtn.style.backgroundColor = "#c0392b";
                 // เสนอไฟล์สำรองให้ดาวน์โหลดทันที เมื่อยืนยันไม่ได้ว่าบันทึกสำเร็จ
                 offerBackupDownload(payload);
-            }
-        }
-
-        // ================= Export ผลสอบเป็น PDF (พร้อมเฉลย) =================
-        async function exportResultsPDF() {
-            if (!examDetailsStructured.length) {
-                alert('ยังไม่มีข้อมูลผลสอบให้ส่งออก');
-                return;
-            }
-
-            const exportBtn = document.getElementById('exportPdfBtn');
-            const originalLabel = exportBtn.innerText;
-            exportBtn.disabled = true;
-            exportBtn.innerText = '⏳ กำลังสร้างไฟล์ PDF...';
-
-            const examTypeName = (currentExamType === 'theory') ? 'สอบทฤษฎี (วิเคราะห์กราฟ)' : 'สอบปฏิบัติ (แก้ไขสถานการณ์)';
-
-            const rowsHtml = examDetailsStructured.map(item => `
-                <tr>
-                    <td style="padding:8px; text-align:center; border-bottom:1px solid #e0e0e0;">${item.no}</td>
-                    <td style="padding:8px; border-bottom:1px solid #e0e0e0;">${item.scenario}</td>
-                    <td style="padding:8px; border-bottom:1px solid #e0e0e0; color:${item.isCorrect ? '#1e8449' : '#c0392b'}; font-weight:bold;">${item.studentResult}</td>
-                    <td style="padding:8px; border-bottom:1px solid #e0e0e0;">${item.solution}</td>
-                </tr>`).join('');
-
-            const reportHtml = `
-                <div id="pdfReportContainer" style="position:fixed; left:-9999px; top:0; width:780px; background:#ffffff; padding:30px; font-family:'Sarabun', sans-serif; color:#2c3e50;">
-                    <h2 style="text-align:center; color:#8e44ad; margin-bottom:5px;">ผลการทดสอบ Ventilator Graphics Simulator</h2>
-                    <p style="text-align:center; color:#7f8c8d; margin-top:0; margin-bottom:20px;">${examTypeName}</p>
-                    <table style="width:100%; margin-bottom:20px; font-size:14px; border-collapse:collapse;">
-                        <tr><td style="padding:4px; font-weight:bold; width:150px;">ชื่อ-สกุล:</td><td style="padding:4px;">${studentData.name || '-'}</td></tr>
-                        <tr><td style="padding:4px; font-weight:bold;">หน่วยงาน:</td><td style="padding:4px;">${studentData.department || '-'}</td></tr>
-                        <tr><td style="padding:4px; font-weight:bold;">โรงพยาบาล:</td><td style="padding:4px;">${studentData.hospital || '-'}</td></tr>
-                        <tr><td style="padding:4px; font-weight:bold;">อายุงาน:</td><td style="padding:4px;">${studentData.experience || '-'} ปี</td></tr>
-                        <tr><td style="padding:4px; font-weight:bold;">วันที่สอบ:</td><td style="padding:4px;">${new Date().toLocaleString('th-TH')}</td></tr>
-                    </table>
-                    <div style="text-align:center; background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:20px; border:2px solid #8e44ad;">
-                        <span style="font-size:16px;">คะแนนรวม: </span>
-                        <span style="font-size:28px; font-weight:bold; color:#1e8449;">${examScore} / 10</span>
-                    </div>
-                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                        <thead>
-                            <tr style="background:#8e44ad; color:white;">
-                                <th style="padding:8px;">ข้อ</th>
-                                <th style="padding:8px;">สถานการณ์ / โจทย์</th>
-                                <th style="padding:8px;">ผลคำตอบของผู้สอบ</th>
-                                <th style="padding:8px;">คำอธิบาย / เฉลยที่ถูกต้อง</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rowsHtml}</tbody>
-                    </table>
-                </div>`;
-
-            document.body.insertAdjacentHTML('beforeend', reportHtml);
-            const container = document.getElementById('pdfReportContainer');
-
-            try {
-                const canvas = await html2canvas(container, { scale: 2, useCORS: true });
-                const imgData = canvas.toDataURL('image/png');
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const pageWidth = pdf.internal.pageSize.getWidth();
-                const pageHeight = pdf.internal.pageSize.getHeight();
-                const imgWidth = pageWidth;
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-                let heightLeft = imgHeight;
-                let position = 0;
-
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
-
-                while (heightLeft > 0) {
-                    position = heightLeft - imgHeight;
-                    pdf.addPage();
-                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                    heightLeft -= pageHeight;
-                }
-
-                const safeName = (studentData.name || 'exam').replace(/[^a-zA-Zก-๙0-9]/g, '_');
-                pdf.save(`ผลสอบ_${safeName}_${currentSubmissionId ? currentSubmissionId.substring(0, 8) : Date.now()}.pdf`);
-            } catch (err) {
-                alert('ไม่สามารถสร้าง PDF ได้: ' + err.message);
-            } finally {
-                container.remove();
-                exportBtn.disabled = false;
-                exportBtn.innerText = originalLabel;
             }
         }
 
@@ -873,19 +775,6 @@
             switchPatientVideo();
         }
 
-        // ---- Reset เฉพาะกราฟ/พารามิเตอร์ กลับสู่ค่าปกติ โดยไม่ออกจากโหมดจำลอง ----
-        function resetGraphOnly() {
-            document.getElementById('modeSelect').value = 'pcv';
-            document.getElementById('flowSelect').value = 'decel';
-            document.getElementById('abnormalSelect').value = 'normal';
-            document.getElementById('rrSlider').value = 15; document.getElementById('rrVal').innerText = '15';
-            document.getElementById('tiSlider').value = 1.0; document.getElementById('tiVal').innerText = '1.0';
-            document.getElementById('piSlider').value = 15; document.getElementById('piVal').innerText = '15';
-            document.getElementById('peepSlider').value = 5; document.getElementById('peepVal').innerText = '5';
-            document.getElementById('slopeSlider').value = 0; document.getElementById('slopeVal').innerText = '0';
-            switchPatientVideo(true);
-        }
-
         function checkAutoAsynchrony() {
             if (currentExamType !== 'none') return;
 
@@ -897,30 +786,16 @@
             let dropdown = document.getElementById('abnormalSelect');
             let currentState = dropdown.value;
 
-            // กลุ่มอาการที่ผู้สอนสามารถสาธิตการ "แก้ไข" ได้จริงด้วยการปรับพารามิเตอร์ (RR, Ti, Pressure)
-            // เหมือนกับที่ผู้สอบใช้แก้โจทย์ในโหมดสอบปฏิบัติ ถ้าปรับค่าจนเข้าเงื่อนไข กราฟจะกลับปกติเอง
-            const sliderManagedStates = ['normal', 'autopeep', 'prolong', 'double_trigger', 'premature_cycle', 'scoop_mild'];
-            if (!sliderManagedStates.includes(currentState)) return;
-
-            if (teTimeSec < 0.65) {
-                dropdown.value = 'autopeep';
-            } else if (rr <= 15 && tiSetting >= 2.0) {
-                dropdown.value = 'prolong';
-            } else if (currentState === 'double_trigger' && !checkFixedBySliders('double_trigger')) {
-                // ยังไม่แก้ไข คงสภาพผิดปกติไว้
-            } else if (currentState === 'premature_cycle' && !checkFixedBySliders('premature_cycle')) {
-                // ยังไม่แก้ไข คงสภาพผิดปกติไว้
-            } else if (currentState === 'scoop_mild' && !checkFixedBySliders('scoop_mild')) {
-                // ยังไม่แก้ไข คงสภาพผิดปกติไว้
-            } else {
-                dropdown.value = 'normal';
+            if (currentState === 'normal' || currentState === 'autopeep' || currentState === 'prolong') {
+                if (teTimeSec < 0.65) { dropdown.value = 'autopeep'; }
+                else if (rr <= 15 && tiSetting >= 2.0) { dropdown.value = 'prolong'; }
+                else { dropdown.value = 'normal'; }
             }
         }
 
-        function resetApp(skipConfirm) {
+        function resetApp() {
             // ป้องกันการกด Reset พลาดระหว่างทำข้อสอบ (คะแนนที่ยังไม่ได้ส่งจะหายทันที)
-            // (ถ้าสอบเสร็จและส่งคำตอบเรียบร้อยแล้ว จะส่ง skipConfirm=true มา เพื่อไม่ต้องถามซ้ำ)
-            if (!skipConfirm && currentExamType !== 'none') {
+            if (currentExamType !== 'none') {
                 const confirmMsg = 'กำลังทำข้อสอบอยู่ ข้อมูลที่ยังไม่ได้ส่งจะหายไป\nต้องการยกเลิกและกลับสู่โหมดจำลองจริงหรือไม่?';
                 if (!confirm(confirmMsg)) return;
             }
@@ -933,7 +808,6 @@
             document.getElementById('examModeBtn').style.display = 'block';
             document.getElementById('answerModal').style.display = 'none';
             document.getElementById('backupDownloadLink').style.display = 'none';
-            document.getElementById('exportPdfBtn').style.display = 'none';
             setSaveStatus('', '');
 
             toggleSliders(false);
@@ -950,8 +824,7 @@
             let nextBtn = document.getElementById('nextQuestionBtn');
             nextBtn.onclick = loadNextQuestion;
 
-            // บังคับรีเฟรชวิดีโอผู้ป่วยเสมอ (ป้องกันจอค้าง/จอดำหลังออกจากโหมดสอบ)
-            switchPatientVideo(true);
+            switchPatientVideo();
         }
 
         // เตือนก่อนปิด/รีเฟรชหน้าเว็บถ้ากำลังทำข้อสอบอยู่ (ป้องกันข้อมูลหาย)
@@ -966,7 +839,7 @@
         function openGuide() { document.getElementById('guideModal').style.display = 'block'; }
         function closeGuide() { document.getElementById('guideModal').style.display = 'none'; }
 
-        function switchPatientVideo(force) {
+        function switchPatientVideo() {
             const mode = document.getElementById('modeSelect').value;
             const flowType = document.getElementById('flowSelect').value;
             const abnormalState = document.getElementById('abnormalSelect').value;
@@ -978,9 +851,8 @@
                 else if (mode === 'psv' && flowType === 'decel') videoKey = 'over_assist';
             }
             let targetSrc = patientVideos[videoKey];
-            if (targetSrc && (force || !videoEl.src.endsWith(targetSrc))) {
+            if (targetSrc && !videoEl.src.endsWith(targetSrc)) {
                 videoEl.src = targetSrc;
-                videoEl.load();
                 videoEl.play().catch(e => {});
             }
         }
