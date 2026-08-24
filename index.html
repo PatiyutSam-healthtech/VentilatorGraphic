@@ -187,7 +187,7 @@
 
             <div id="abnormalControlGroup" class="control-group" style="align-items: flex-start; flex: 1 1 200px;">
                 <label for="abnormalSelect">Asynchrony & Alarms (จำลอง)</label>
-                <select id="abnormalSelect" onchange="switchPatientVideo()">
+                <select id="abnormalSelect" onchange="handleAbnormalSelectChange()">
                     <option value="normal">ปกติ (Normal)</option>
                     <option value="autopeep">ลมค้าง (Auto-PEEP)</option>
                     <option value="auto_trigger">เครื่องตีเอง (Auto-Triggering / Leak)</option>
@@ -375,6 +375,10 @@
         let currentGuideTxt = '';
         let actionTaken = '';
 
+        // ค่าพารามิเตอร์ ณ จุดเริ่มต้นของสถานการณ์ผิดปกติปัจจุบัน ใช้เป็นฐานคำนวณว่า "ปรับเพิ่ม/ลดพอหรือยัง"
+        // เพื่อให้ต้องปรับพารามิเตอร์อย่างมีนัยสำคัญจริงๆ ถึงจะถือว่าแก้ไขสำเร็จ (ไม่ใช่แค่ขยับ 1 หน่วยแล้วผ่านพอดี)
+        let scenarioBaseline = { rr: 15, ti: 1.0, pi: 15 };
+
         let audioCtx = null;
         let alarmInterval = null;
         let isMuted = false;
@@ -440,6 +444,25 @@
                 checkAutoAsynchrony();
                 switchPatientVideo();
             }
+        }
+
+        // บันทึกค่าพารามิเตอร์ปัจจุบันไว้เป็น "จุดเริ่มต้น" ของสถานการณ์ผิดปกติ เพื่อคำนวณว่าปรับเพิ่ม/ลดมากพอหรือยัง
+        function captureBaseline() {
+            scenarioBaseline = {
+                rr: parseInt(document.getElementById('rrSlider').value),
+                ti: parseFloat(document.getElementById('tiSlider').value),
+                pi: parseInt(document.getElementById('piSlider').value)
+            };
+        }
+
+        // ทำงานเมื่อผู้สอนเลือกภาวะผิดปกติใหม่จาก dropdown ในโหมดจำลอง (สอน)
+        function handleAbnormalSelectChange() {
+            const val = document.getElementById('abnormalSelect').value;
+            actionTaken = '';
+            if (currentExamType === 'none' && val !== 'normal') {
+                captureBaseline();
+            }
+            switchPatientVideo();
         }
 
         // ================= Utility: submission id / backup =================
@@ -574,6 +597,7 @@
                 document.getElementById('rrSlider').value = q.init.rr; document.getElementById('rrVal').innerText = q.init.rr;
                 document.getElementById('tiSlider').value = q.init.ti; document.getElementById('tiVal').innerText = q.init.ti;
                 document.getElementById('piSlider').value = q.init.pi; document.getElementById('piVal').innerText = q.init.pi;
+                scenarioBaseline = { rr: q.init.rr, ti: q.init.ti, pi: q.init.pi };
             }
 
             switchPatientVideo();
@@ -586,12 +610,13 @@
             let ti = parseFloat(document.getElementById('tiSlider').value);
             let pi = parseInt(document.getElementById('piSlider').value);
             let te = (60/rr) - ti;
+            let base = scenarioBaseline;
 
             if (abnormalId === 'autopeep' && te >= 0.65) return true;
             if (abnormalId === 'prolong' && ti < 2.0) return true;
-            if (abnormalId === 'double_trigger' && (pi >= 20 || ti >= 1.2)) return true;
-            if (abnormalId === 'premature_cycle' && ti >= 1.0) return true;
-            if (abnormalId === 'scoop_mild' && pi >= 20) return true;
+            if (abnormalId === 'double_trigger' && (pi >= base.pi + 3 || ti >= base.ti + 0.5)) return true;
+            if (abnormalId === 'premature_cycle' && ti >= base.ti + 0.4) return true;
+            if (abnormalId === 'scoop_mild' && pi >= base.pi + 3) return true;
             if (abnormalId === 'sawtooth' && actionTaken === 'suction') return true;
             if (abnormalId === 'auto_trigger' && actionTaken === 'fix_leak') return true;
             return false;
@@ -929,6 +954,7 @@
             document.getElementById('piSlider').value = 15; document.getElementById('piVal').innerText = '15';
             document.getElementById('peepSlider').value = 5; document.getElementById('peepVal').innerText = '5';
             document.getElementById('slopeSlider').value = 0; document.getElementById('slopeVal').innerText = '0';
+            scenarioBaseline = { rr: 15, ti: 1.0, pi: 15 };
             switchPatientVideo(true);
         }
 
@@ -942,6 +968,7 @@
             currentExamType = 'none';
             actionTaken = '';
             examDetailsData = [];
+            scenarioBaseline = { rr: 15, ti: 1.0, pi: 15 };
             document.getElementById('examRunningSection').style.display = 'none';
             document.getElementById('guidelineSection').style.display = 'block';
             document.getElementById('abnormalControlGroup').style.display = 'flex';
