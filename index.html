@@ -33,10 +33,14 @@
         .main-display { display: flex; flex-wrap: wrap; gap: 20px; width: 100%; justify-content: center; margin-bottom: 20px; }
 
         .clinical-panel { background: #ecf0f1; border: 2px solid #bdc3c7; border-radius: 10px; width: 320px; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: inset 0 0 15px rgba(0,0,0,0.05); }
+        .graph-column { display: flex; flex-direction: column; width: 100%; max-width: 850px; background: #ecf0f1; border: 2px solid #bdc3c7; border-radius: 10px; padding: 15px; box-shadow: inset 0 0 15px rgba(0,0,0,0.05); box-sizing: border-box; }
+        .graph-legend { display: flex; flex-wrap: wrap; gap: 10px 28px; justify-content: center; margin-top: 12px; font-size: 13px; color: #2c3e50; }
+        .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
         .clinical-title { font-weight: bold; color: #2c3e50; font-size: 16px; margin-bottom: 10px; border-bottom: 2px solid #bdc3c7; padding-bottom: 5px; text-transform: uppercase; }
 
         .bed-scene { position: relative; width: 100%; height: 200px; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 15px; box-shadow: inset 0 4px 10px rgba(0,0,0,0.1); border: 2px solid #bdc3c7; }
         .patient-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; transition: opacity 0.3s; }
+        .video-placeholder { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; flex-direction: column; align-items: center; justify-content: center; color: #7f8c8d; font-size: 30px; text-align: center; background: #1a252f; }
         .vent-screen-light { position: absolute; left: 20px; bottom: 20px; width: 15px; height: 15px; background: #34495e; z-index: 2; border-radius: 50%; opacity: 0.9; transition: background 0.1s, box-shadow 0.1s; }
 
         .status-box { background: white; padding: 12px; border-radius: 6px; border: 1px solid #bdc3c7; text-align: left; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.3s;}
@@ -112,6 +116,7 @@
 
                 <div class="bed-scene">
                     <video id="patientVideo" src="" class="patient-video" autoplay loop muted playsinline></video>
+                    <div id="videoPlaceholder" class="video-placeholder">🛌<br><span style="font-size:11px;">ไม่พบไฟล์วิดีโอ</span></div>
                     <div id="ventScreen" class="vent-screen-light"></div>
                 </div>
 
@@ -160,7 +165,7 @@
             </div>
 
             <!-- ส่วนของกราฟและ Alarm Bar -->
-            <div style="display: flex; flex-direction: column; width: 100%; max-width: 850px;">
+            <div class="graph-column">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; height: 30px; width: 100%;">
                     <div id="topAlarmLight" class="alarm-indicator">
                         <span style="font-size: 16px;">🚨</span> ALARM
@@ -169,6 +174,11 @@
                 </div>
 
                 <canvas id="ventCanvas" width="850" height="380"></canvas>
+
+                <div class="graph-legend">
+                    <span><span class="legend-dot" style="background:#f1c40f;"></span>Paw — แรงดันในทางเดินหายใจ (cmH2O)</span>
+                    <span><span class="legend-dot" style="background:#2ecc71;"></span>Flow — อัตราการไหลของอากาศ (L/min)</span>
+                </div>
             </div>
         </div>
 
@@ -1016,6 +1026,7 @@
             const flowType = document.getElementById('flowSelect').value;
             const abnormalState = document.getElementById('abnormalSelect').value;
             const videoEl = document.getElementById('patientVideo');
+            const placeholderEl = document.getElementById('videoPlaceholder');
 
             let videoKey = abnormalState;
             if (abnormalState === 'normal') {
@@ -1028,6 +1039,21 @@
                 videoEl.play().catch(e => {});
             }
         }
+
+        // ถ้าไฟล์วิดีโอโหลดไม่สำเร็จ (เช่น ไฟล์ไม่ได้ถูกอัปโหลดขึ้น GitHub Pages) ให้แสดง placeholder แทนจอดำ
+        (function setupVideoFallback() {
+            const videoEl = document.getElementById('patientVideo');
+            const placeholderEl = document.getElementById('videoPlaceholder');
+            if (!videoEl || !placeholderEl) return;
+            videoEl.addEventListener('error', function () {
+                videoEl.style.display = 'none';
+                placeholderEl.style.display = 'flex';
+            });
+            videoEl.addEventListener('loadeddata', function () {
+                videoEl.style.display = 'block';
+                placeholderEl.style.display = 'none';
+            });
+        })();
 
         async function fetchSettingsFromGAS() {
             try {
