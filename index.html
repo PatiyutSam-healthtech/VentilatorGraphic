@@ -1079,6 +1079,55 @@
             waveformDescText: document.getElementById('waveformDescText')
         };
 
+        // ================= ลูกศรชี้จุดผิดปกติ (โหมดจำลอง/สอน เท่านั้น) =================
+        // สำหรับแต่ละภาวะผิดปกติ: จุดสังเกตอยู่ที่ "เวลา" ใดในรอบการหายใจ (0 = เริ่มหายใจเข้า, drawTiLength = เริ่มหายใจออก, cycleLength = จบรอบ)
+        // และอยู่ที่ตำแหน่ง y โดยประมาณบนกราฟ (ใช้ชี้เป้าคร่าวๆ ให้ผู้เรียนสังเกต ไม่จำเป็นต้องตรงเส้นเป๊ะ)
+        const abnormalMarkers = {
+            autopeep:        { label: 'Flow ไม่กลับสู่ 0 ก่อนหายใจเข้ารอบใหม่', getTime: (cyc, ti) => cyc - 8,   y: 305 },
+            auto_trigger:    { label: 'Flow ไม่กลับสู่ 0 + หายใจถี่ผิดปกติ',   getTime: (cyc, ti) => cyc - 8,   y: 280 },
+            double_trigger:  { label: 'หายใจ 2 รอบซ้อนกัน',                    getTime: (cyc, ti) => ti * 1.5,  y: 100 },
+            premature_cycle: { label: 'Flow ตีกลับ เครื่องตัดเร็วเกินไป',       getTime: (cyc, ti) => ti + 10,   y: 250 },
+            trigger_fail:    { label: 'ผู้ป่วยออกแรงแต่เครื่องไม่ตอบสนอง',      getTime: (cyc, ti) => cyc * 0.7, y: 305 },
+            sawtooth:        { label: 'กราฟสั่นฟันเลื่อย (น้ำ/เสมหะในสาย)',     getTime: (cyc, ti) => ti * 0.5,  y: 205 },
+            delay_cycle:     { label: 'Pressure พุ่งช่วงท้าย Ti',              getTime: (cyc, ti) => ti - 15,   y: 95  },
+            scoop_mild:      { label: 'Pressure เว้าแหว่ง (ผู้ป่วยออกแรงเอง)', getTime: (cyc, ti) => ti * 0.5,  y: 160 },
+            scoop_severe:    { label: 'Pressure เว้าลึก (ออกแรงมาก)',          getTime: (cyc, ti) => ti * 0.5,  y: 168 },
+            prolong:         { label: 'Pressure สูงขึ้นช่วงท้าย Ti (ฝืนหายใจออก)', getTime: (cyc, ti) => ti - 10, y: 100 }
+        };
+
+        // หาตำแหน่ง x บนหน้าจอ ณ เฟรมปัจจุบัน ที่สอดคล้องกับ "เวลา" ที่ต้องการภายในรอบการหายใจ (กราฟเลื่อนตลอดเวลาจึงต้องคำนวณใหม่ทุกเฟรม)
+        function findMarkerX(markerTime, cycleLen, xOff, canvasW) {
+            let base = ((markerTime + xOff - canvasW - 100) % cycleLen + cycleLen) % cycleLen;
+            let desired = canvasW * 0.62;
+            let x = base + cycleLen * Math.round((desired - base) / cycleLen);
+            if (x < 60) x += cycleLen;
+            if (x > canvasW - 60) x -= cycleLen;
+            return x;
+        }
+
+        function drawAbnormalMarker(x, y, text) {
+            ctx.save();
+            ctx.fillStyle = '#ff3b3b';
+            ctx.strokeStyle = '#ff3b3b';
+            ctx.lineWidth = 2.5;
+            const topY = y - 28;
+            ctx.beginPath();
+            ctx.moveTo(x, topY);
+            ctx.lineTo(x, y - 6);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x - 6, y - 12);
+            ctx.lineTo(x, y - 2);
+            ctx.lineTo(x + 6, y - 12);
+            ctx.closePath();
+            ctx.fill();
+            ctx.font = 'bold 12px Sarabun, Arial';
+            ctx.textAlign = 'center';
+            let labelX = Math.min(Math.max(x, 95), canvas.width - 95);
+            ctx.fillText(text, labelX, Math.max(topY - 6, 14));
+            ctx.restore();
+        }
+
         function drawWaveform() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -1207,6 +1256,14 @@
 
             ctx.fillStyle = '#f1c40f'; ctx.font = '16px Arial'; ctx.fillText('Paw (cmH2O)', 10, 25);
             ctx.fillStyle = '#2ecc71'; ctx.fillText('Flow (L/min)', 10, 175);
+
+            // ชี้จุดผิดปกติด้วยลูกศร เฉพาะโหมดจำลอง/สอน (ไม่ใช่ระหว่างสอบ) เพื่อช่วยให้ผู้เรียนสังเกตกราฟได้ง่ายขึ้น
+            if (currentExamType === 'none' && abnormalMarkers[abnormal]) {
+                const marker = abnormalMarkers[abnormal];
+                const mTime = marker.getTime(cycleLength, drawTiLength);
+                const mx = findMarkerX(mTime, cycleLength, xOffset, canvas.width);
+                drawAbnormalMarker(mx, marker.y, marker.label);
+            }
 
             let rightEdgeTime = ((canvas.width - 1 - xOffset + canvas.width + 100) % cycleLength);
             let phase = rightEdgeTime < drawTiLength ? 'Insp' : 'Exp';
