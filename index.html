@@ -9,9 +9,8 @@
         body { font-family: 'Sarabun', sans-serif; background-color: #1a252f; text-align: center; padding: 20px; margin: 0; color: #333; }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); max-width: 1250px; margin: auto; display: flex; flex-direction: column; align-items: center; position: relative; }
 
-        .header-box { display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 150px; position: relative; }
-        .clinical-column { position: relative; }
-        .clinic-logo-large { display: block; position: absolute; bottom: calc(100% + 15px); left: 50%; transform: translateX(-50%); height: 130px; }
+        .header-box { display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 20px; position: relative; }
+        .hospital-logo { height: 70px; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); }
         .header-text { display: flex; flex-direction: column; align-items: center; }
         .header-title { color: #2c3e50; margin: 0 0 5px 0; font-size: 26px; font-weight: 700; }
         .subtitle { color: #7f8c8d; font-size: 15px; margin: 0; }
@@ -40,7 +39,6 @@
 
         .bed-scene { position: relative; width: 100%; height: 200px; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 15px; box-shadow: inset 0 4px 10px rgba(0,0,0,0.1); border: 2px solid #bdc3c7; }
         .patient-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; transition: opacity 0.3s; }
-        .video-placeholder { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; flex-direction: column; align-items: center; justify-content: center; color: #7f8c8d; font-size: 30px; text-align: center; background: #1a252f; }
         .vent-screen-light { position: absolute; left: 20px; bottom: 20px; width: 15px; height: 15px; background: #34495e; z-index: 2; border-radius: 50%; opacity: 0.9; transition: background 0.1s, box-shadow 0.1s; }
 
         .status-box { background: white; padding: 12px; border-radius: 6px; border: 1px solid #bdc3c7; text-align: left; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.3s;}
@@ -84,8 +82,8 @@
         @media (max-width: 480px) {
             body { padding: 10px; }
             .container { padding: 15px; }
-            .header-box { margin-bottom: 95px; }
-            .clinic-logo-large { height: 75px; }
+            .header-box { flex-direction: column; }
+            .hospital-logo { position: static; transform: none; height: 55px; margin-bottom: 8px; }
             .header-title { font-size: 20px; }
             .subtitle { font-size: 13px; padding: 0 10px; }
             .header-buttons .top-btn { flex: 1 1 100%; }
@@ -96,6 +94,7 @@
 
     <div class="container">
         <div class="header-box">
+            <img src="https://lh3.googleusercontent.com/d/1DlsLtw43ZhgFrmvjS6ySFH4EmSwuS0tk" alt="Hospital Logo" class="hospital-logo">
             <div class="header-text">
                 <h2 class="header-title">VENTILATOR GRAPHICS SIMULATOR</h2>
                 <div class="subtitle">Advanced Clinical & Asynchrony Module | พัฒนาโดย นายปฏิยุทธ์ อุปพงษ์</div>
@@ -109,14 +108,11 @@
         </div>
 
         <div class="main-display">
-            <div class="clinical-column">
-                <img src="https://lh3.googleusercontent.com/d/1DlsLtw43ZhgFrmvjS6ySFH4EmSwuS0tk" alt="Hospital Logo" class="clinic-logo-large">
-                <div class="clinical-panel">
+            <div class="clinical-panel">
                 <div class="clinical-title">🏥 Patient Monitor</div>
 
                 <div class="bed-scene">
                     <video id="patientVideo" src="" class="patient-video" autoplay loop muted playsinline></video>
-                    <div id="videoPlaceholder" class="video-placeholder">🛌<br><span style="font-size:11px;">ไม่พบไฟล์วิดีโอ</span></div>
                     <div id="ventScreen" class="vent-screen-light"></div>
                 </div>
 
@@ -160,7 +156,6 @@
 
                         <button id="submitExamBtn" class="top-btn btn-exam" style="width: 100%; padding: 8px;" onclick="checkAnswer()">ส่งคำตอบ (Submit)</button>
                     </div>
-                </div>
                 </div>
             </div>
 
@@ -1026,7 +1021,6 @@
             const flowType = document.getElementById('flowSelect').value;
             const abnormalState = document.getElementById('abnormalSelect').value;
             const videoEl = document.getElementById('patientVideo');
-            const placeholderEl = document.getElementById('videoPlaceholder');
 
             let videoKey = abnormalState;
             if (abnormalState === 'normal') {
@@ -1039,21 +1033,6 @@
                 videoEl.play().catch(e => {});
             }
         }
-
-        // ถ้าไฟล์วิดีโอโหลดไม่สำเร็จ (เช่น ไฟล์ไม่ได้ถูกอัปโหลดขึ้น GitHub Pages) ให้แสดง placeholder แทนจอดำ
-        (function setupVideoFallback() {
-            const videoEl = document.getElementById('patientVideo');
-            const placeholderEl = document.getElementById('videoPlaceholder');
-            if (!videoEl || !placeholderEl) return;
-            videoEl.addEventListener('error', function () {
-                videoEl.style.display = 'none';
-                placeholderEl.style.display = 'flex';
-            });
-            videoEl.addEventListener('loadeddata', function () {
-                videoEl.style.display = 'block';
-                placeholderEl.style.display = 'none';
-            });
-        })();
 
         async function fetchSettingsFromGAS() {
             try {
