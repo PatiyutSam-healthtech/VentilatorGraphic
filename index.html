@@ -803,7 +803,7 @@
             if (abnormalId === 'prolong' && ti < 2.0) return true;
             if (abnormalId === 'double_trigger' && (pi >= base.pi + 3 || ti >= base.ti + 0.5)) return true;
             if (abnormalId === 'premature_cycle' && ti >= base.ti + 0.4) return true;
-            if (abnormalId === 'delay_cycle' && ti <= base.ti - 0.4) return true;
+            if (abnormalId === 'delay_cycle' && ti <= base.ti - 0.1) return true;
             if (abnormalId === 'scoop_mild' && pi >= base.pi + 3) return true;
             if (abnormalId === 'scoop_severe' && pi >= base.pi + 3) return true;
             if (abnormalId === 'sawtooth' && actionTaken === 'suction') return true;
