@@ -448,7 +448,12 @@
                 el.value = o.value; el.textContent = o.text;
                 select.appendChild(el);
             });
-            select.value = opts.some(function (o) { return o.value === prevValue; }) ? prevValue : opts[0].value;
+            const forcedDefault = { psv: 'sine' }[mode];
+            if (forcedDefault) {
+                select.value = forcedDefault;
+            } else {
+                select.value = opts.some(function (o) { return o.value === prevValue; }) ? prevValue : opts[0].value;
+            }
             select.disabled = opts.length === 1;
         }
 
@@ -1566,8 +1571,16 @@
                     if(mode === 'psv' && time < 8) p_y += 12;
 
                     if (mode === 'vcv' && flowType === 'square') {
-                        // Flow คงที่ตลอด Ti -> ปริมาตรสะสมเป็นเส้นตรง ความดันจึงไต่ขึ้นเป็นเส้นตรงตลอดช่วงหายใจเข้าจนถึง peak
-                        p_y = peepY - (time / drawTiLength) * effAmplitude;
+                        // Flow กระโดดขึ้นทันทีเป็น constant flow -> เกิด resistive pressure แบบเกือบตั้งฉากก่อนเล็กน้อย
+                        // จากนั้นปริมาตรสะสมเป็นเส้นตรง ความดันจึงไต่ขึ้นเป็นเส้นตรงต่อเนื่องจนถึง peak
+                        const jumpLen = 4;
+                        const jumpFrac = 0.18;
+                        if (time < jumpLen) {
+                            p_y = peepY - jumpFrac * effAmplitude * (time / jumpLen);
+                        } else {
+                            let frac = jumpFrac + (1 - jumpFrac) * ((time - jumpLen) / Math.max(drawTiLength - jumpLen, 1));
+                            p_y = peepY - frac * effAmplitude;
+                        }
                     } else if (mode === 'vcv' && flowType === 'sine') {
                         p_y = peepY - effAmplitude * (1 - Math.cos((time / drawTiLength) * Math.PI)) / 2;
                     } else if (mode === 'vcv') {
