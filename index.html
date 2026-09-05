@@ -171,11 +171,12 @@
                     </div>
                 </div>
 
-                <canvas id="ventCanvas" width="850" height="380"></canvas>
+                <canvas id="ventCanvas" width="850" height="560"></canvas>
 
                 <div class="graph-legend">
                     <span><span class="legend-dot" style="background:#f1c40f;"></span>Paw — แรงดันในทางเดินหายใจ (cmH2O)</span>
                     <span><span class="legend-dot" style="background:#2ecc71;"></span>Flow — อัตราการไหลของอากาศ (L/min)</span>
+                    <span><span class="legend-dot" style="background:#3498db;"></span>Volume — ปริมาตรอากาศ (mL)</span>
                 </div>
             </div>
         </div>
@@ -1406,15 +1407,18 @@
 
             const PRESSURE_SCALE = 3.5; // px ต่อ cmH2O
             const FLOW_SCALE = 70 / 60; // px ต่อ L/min
+            const VOLUME_SCALE = 0.14; // px ต่อ mL
             const flowZeroY = 290;
+            const volumeZeroY = 520;
+            const LUNG_COMPLIANCE = 40; // mL/cmH2O (สมมติค่าปอดปกติ เพื่อการสาธิตเชิงคุณภาพ ใช้ร่วมกันทั้งคำนวณความดัน<->ปริมาตร)
 
             let amplitude = pi * PRESSURE_SCALE;
             let ppeak = pi + peep;
+            let peakVolumeMl = pi * LUNG_COMPLIANCE; // ปริมาตรที่ได้ (ผลลัพธ์จากแรงดันขับ x compliance) ใช้เป็นค่าเริ่มต้นของ PCV/PSV
 
             // ---- VCV: ปริมาตร (TV) เป็นตัวควบคุม ความดันที่เกิดขึ้นเป็น "ผลลัพธ์" จาก flow/compliance/resistance ----
             if (mode === 'vcv') {
                 const tv = parseInt(domCache.tvSlider.value) || 450; // mL
-                const COMPLIANCE = 50; // mL/cmH2O (สมมติค่าปอดปกติ เพื่อการสาธิตเชิงคุณภาพ)
                 const RESISTANCE = 10; // cmH2O/L/s
                 const cycleModeInput = document.querySelector('input[name="vcvCycleMode"]:checked');
                 const cycleBy = cycleModeInput ? cycleModeInput.value : 'ie';
@@ -1427,10 +1431,11 @@
                     tiSetting = cycleTimeSec / (1 + ieVal);
                     vcvFlowLpm = (tv / 1000) * 60 / tiSetting;
                 }
-                const elasticP = tv / COMPLIANCE;
+                const elasticP = tv / LUNG_COMPLIANCE;
                 const resistiveP = (vcvFlowLpm / 60) * RESISTANCE;
                 amplitude = (elasticP + resistiveP) * PRESSURE_SCALE;
                 ppeak = peep + elasticP + resistiveP;
+                peakVolumeMl = tv;
                 domCache.vcvFlowReadout.innerText = vcvFlowLpm.toFixed(0);
                 domCache.vcvIEReadout.innerText = ((cycleTimeSec - tiSetting) / tiSetting).toFixed(1);
                 domCache.vcvPpeakDisplay.innerText = "Ppeak: " + ppeak.toFixed(0);
@@ -1445,6 +1450,7 @@
             else if (mode === 'cpap') {
                 amplitude = 0;
                 ppeak = peep;
+                peakVolumeMl = 350; // ปริมาตรหายใจเองโดยประมาณ เพื่อการแสดงผลเชิงคุณภาพ
             }
 
             if (tiSetting >= cycleTimeSec - 0.15) tiSetting = cycleTimeSec - 0.15;
@@ -1452,7 +1458,8 @@
 
             domCache.ppeakDisplay.innerText = "Ppeak: " + Math.round(ppeak);
 
-            let drawTiLength = tiSetting * PIXELS_PER_SECOND;
+            const nominalTiLen = tiSetting * PIXELS_PER_SECOND; // Ti เต็มก่อนถูกตัดสั้นจาก Premature Cycling ใช้อ้างอิงปริมาตรที่ "ควรจะได้"
+            let drawTiLength = nominalTiLen;
             if (abnormal === 'premature_cycle') drawTiLength = drawTiLength * 0.6;
 
             const teTimeSec = cycleTimeSec - tiSetting;
@@ -1499,17 +1506,25 @@
                 ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(canvas.width, yy); ctx.stroke();
                 ctx.fillText(v, 4, yy - 2);
             }
+            for (let v = 200; v <= 1000; v += 200) {
+                const yy = volumeZeroY - v * VOLUME_SCALE;
+                if (yy < volumeZeroY - 140) continue;
+                ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(canvas.width, yy); ctx.stroke();
+                ctx.fillText(v, 4, yy - 2);
+            }
             ctx.restore();
 
-            // เส้น Zero line ของ Pressure (0 cmH2O) และของ Flow (0 L/min) + เส้น Baseline จริงของ PEEP/CPAP
+            // เส้น Zero line ของ Pressure (0 cmH2O), Flow (0 L/min) และ Volume (0 mL) + เส้น Baseline จริงของ PEEP/CPAP
             ctx.save();
             ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
             ctx.beginPath(); ctx.moveTo(0, 140); ctx.lineTo(canvas.width, 140); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(0, flowZeroY); ctx.lineTo(canvas.width, flowZeroY); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, volumeZeroY); ctx.lineTo(canvas.width, volumeZeroY); ctx.stroke();
             ctx.setLineDash([]);
             ctx.fillStyle = '#bdc3c7'; ctx.font = 'bold 10px Sarabun, Arial'; ctx.textAlign = 'right';
             ctx.fillText('0', canvas.width - 6, 140 - 3);
             ctx.fillText('0', canvas.width - 6, flowZeroY - 3);
+            ctx.fillText('0', canvas.width - 6, volumeZeroY - 3);
 
             ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
             ctx.beginPath(); ctx.moveTo(0, peepY); ctx.lineTo(canvas.width, peepY); ctx.stroke();
@@ -1522,6 +1537,7 @@
             ctx.lineWidth = 3;
             ctx.beginPath(); const pressPath = new Path2D();
             ctx.beginPath(); const flowPath = new Path2D();
+            ctx.beginPath(); const volumePath = new Path2D();
 
             let xOffset = t % (canvas.width + 100);
 
@@ -1530,17 +1546,18 @@
             const cpapCycleLen = (60 / CPAP_SPONT_RR) * PIXELS_PER_SECOND;
 
             for(let x = 0; x < canvas.width; x++) {
-                let p_y, f_y, time;
+                let p_y, f_y, v_y, time;
 
                 if (mode === 'cpap') {
                     let cpapTime = ((x - xOffset + canvas.width + 100) % cpapCycleLen);
                     let phaseAngle = (cpapTime / cpapCycleLen) * Math.PI * 2;
                     p_y = peepY - Math.sin(phaseAngle) * 2.5;
                     f_y = flowZeroY - Math.sin(phaseAngle) * 35;
+                    v_y = volumeZeroY - (1 - Math.cos(phaseAngle)) / 2 * peakVolumeMl * VOLUME_SCALE;
                     time = cpapTime;
                 } else {
                 time = ((x - xOffset + canvas.width + 100) % cycleLength);
-                p_y = peepY; f_y = flowZeroY;
+                p_y = peepY; f_y = flowZeroY; v_y = volumeZeroY;
 
                 let flowRiseSlope = Math.min(time / (slope * 4 + 0.1), 1);
 
@@ -1549,10 +1566,12 @@
                 let effAmplitude = amplitude;
                 let flowPeak = 70;
                 let expFlowPeak = 75;
+                let effPeakVolume = peakVolumeMl;
                 if (abnormal === 'auto_trigger') {
                     effAmplitude = amplitude * 0.25;
                     flowPeak = 70 * 0.35;
                     expFlowPeak = 75 * 0.35;
+                    effPeakVolume = peakVolumeMl * 0.25;
                 }
 
                 let isDoubleTriggerBreath = false;
@@ -1564,6 +1583,8 @@
                         let fakeTime = time - dtStart;
                         p_y = peepY - (fakeTime / drawTiLength) * amplitude - 10;
                         f_y = flowZeroY - 70 * Math.exp(-fakeTime/20);
+                        // ปริมาตรของลมหายใจซ้อนรอบสอง มักมากกว่าปกติเพราะยังไม่ทันหายใจออกหมดจากรอบแรก (breath stacking)
+                        v_y = volumeZeroY - Math.min(1, fakeTime / nominalTiLen) * effPeakVolume * 1.3 * VOLUME_SCALE;
                     }
                 }
 
@@ -1594,6 +1615,14 @@
                     else if (flowType === 'decel') f_y = flowZeroY - (flowPeak * flowRiseSlope) * Math.exp(-time/30);
                     else if (flowType === 'sine') f_y = flowZeroY - Math.sin((time / drawTiLength) * Math.PI) * flowPeak * flowRiseSlope;
 
+                    // ปริมาตร = ผลรวมสะสมของ Flow ตามเวลา รูปทรงจึงล้อไปกับ Controlled Variable ที่เลือก
+                    // ใช้ nominalTiLen (Ti ก่อนถูกตัดสั้น) เป็นตัวหาร เพื่อให้เห็นปริมาตรที่ "ได้จริง" ลดลงเมื่อเกิด Premature Cycling
+                    let fracVol;
+                    if (flowType === 'square') fracVol = Math.min(time / nominalTiLen, 1);
+                    else if (flowType === 'sine') fracVol = (1 - Math.cos((time / nominalTiLen) * Math.PI)) / 2;
+                    else fracVol = 1 - Math.exp(-time / 30);
+                    v_y = volumeZeroY - fracVol * effPeakVolume * VOLUME_SCALE;
+
                     if(abnormal === 'scoop_mild') p_y += Math.sin((time / drawTiLength) * Math.PI) * 6;
                     if(abnormal === 'scoop_severe') p_y += Math.sin((time / drawTiLength) * Math.PI) * 15;
                     if(abnormal === 'delay_cycle' && time > drawTiLength - 25) { p_y -= 25; f_y = flowZeroY + 20; }
@@ -1601,6 +1630,7 @@
                 } else if (!isDoubleTriggerBreath) {
                     let expTime = time - drawTiLength;
                     p_y = peepY - effAmplitude * Math.exp(-expTime/15);
+                    v_y = volumeZeroY - effPeakVolume * Math.exp(-expTime/15) * VOLUME_SCALE;
 
                     if(abnormal === 'autopeep') { f_y = flowZeroY + 75 * Math.exp(-expTime/80); }
                     else { f_y = flowZeroY + expFlowPeak * Math.exp(-expTime/20); }
@@ -1627,15 +1657,17 @@
                 }
                 }
 
-                if(x === 0) { pressPath.moveTo(x, p_y); flowPath.moveTo(x, f_y); }
-                else { pressPath.lineTo(x, p_y); flowPath.lineTo(x, f_y); }
+                if(x === 0) { pressPath.moveTo(x, p_y); flowPath.moveTo(x, f_y); volumePath.moveTo(x, v_y); }
+                else { pressPath.lineTo(x, p_y); flowPath.lineTo(x, f_y); volumePath.lineTo(x, v_y); }
             }
 
             ctx.strokeStyle = '#f1c40f'; ctx.stroke(pressPath);
             ctx.strokeStyle = '#2ecc71'; ctx.stroke(flowPath);
+            ctx.strokeStyle = '#3498db'; ctx.stroke(volumePath);
 
             ctx.fillStyle = '#f1c40f'; ctx.font = '16px Arial'; ctx.fillText('Paw (cmH2O)', 10, 25);
             ctx.fillStyle = '#2ecc71'; ctx.fillText('Flow (L/min)', 10, 175);
+            ctx.fillStyle = '#3498db'; ctx.fillText('Volume (mL)', 10, 405);
 
             // ชี้จุดผิดปกติด้วยลูกศร เฉพาะโหมดจำลอง/สอน (ไม่ใช่ระหว่างสอบ) และเมื่อผู้ใช้เปิดการแสดงลูกศรไว้
             if (showMarkers && currentExamType === 'none' && mode !== 'cpap' && abnormalMarkers[abnormal]) {
