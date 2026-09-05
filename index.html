@@ -183,12 +183,13 @@
         <div class="control-panel">
             <div class="control-group" style="align-items: flex-start; flex: 1 1 180px;">
                 <label for="modeSelect">Mode (โหมด)</label>
-                <select id="modeSelect" onchange="handleModeFlowChange()">
-                    <option value="cmv">CMV (Volume)</option>
-                    <option value="pcv" selected>PCV (Pressure)</option>
-                    <option value="psv">PSV (Support)</option>
+                <select id="modeSelect" onchange="handleModeChange()">
+                    <option value="vcv">VCV (Volume Control)</option>
+                    <option value="pcv" selected>PCV (Pressure Control)</option>
+                    <option value="psv">PSV (Pressure Support)</option>
+                    <option value="cpap">CPAP / SV</option>
                 </select>
-                <label for="flowSelect" style="margin-top: 10px;">Flow Pattern</label>
+                <label for="flowSelect" id="flowSelectLabel" style="margin-top: 10px;">Controlled Variable</label>
                 <select id="flowSelect" onchange="handleModeFlowChange()">
                     <option value="square">Square</option>
                     <option value="decel" selected>Decelerating</option>
@@ -197,7 +198,7 @@
             </div>
 
             <div id="abnormalControlGroup" class="control-group" style="align-items: flex-start; flex: 1 1 200px;">
-                <label for="abnormalSelect">Asynchrony & Alarms (จำลอง)</label>
+                <label for="abnormalSelect">Dyssynchrony & Alarms (จำลอง)</label>
                 <select id="abnormalSelect" onchange="handleAbnormalSelectChange()">
                     <option value="normal">ปกติ (Normal)</option>
                     <option value="autopeep">ลมค้าง (Auto-PEEP)</option>
@@ -207,8 +208,7 @@
                     <option value="trigger_fail">ไม่ตอบสนองแรงดูด (Trigger Failure)</option>
                     <option value="sawtooth">มีน้ำ/เสมหะในสาย (Sawtooth Pattern)</option>
                     <option value="delay_cycle">ตัดช้า (Delayed Cycling)</option>
-                    <option value="scoop_mild">Pressure Scooped out (Mild)</option>
-                    <option value="scoop_severe">Pressure Scooped out (Severe)</option>
+                    <option value="scoop_severe">Flow Starvation</option>
                     <option value="prolong">ฝืนหายใจออก (Prolonged Ti)</option>
                 </select>
                 <button id="resetGraphBtn" class="top-btn" style="background:#95a5a6; width:100%; margin-top: 12px;" onclick="resetGraphOnly()">🔄 รีเซ็ตกราฟ (Reset)</button>
@@ -223,40 +223,93 @@
                 </div>
             </div>
 
-            <div class="control-group">
+            <div id="rrGroup" class="control-group">
                 <label for="rrSlider">อัตราหายใจ (RR)</label>
                 <div class="digital-value" id="rrVal">15</div>
                 <input type="range" id="rrSlider" min="10" max="35" value="15" oninput="document.getElementById('rrVal').innerText = this.value; checkAutoAsynchrony(); switchPatientVideo(); initAudioContext();">
             </div>
 
-            <div class="control-group">
+            <div id="tiGroup" class="control-group">
                 <label for="tiSlider">เวลา (Ti) <span id="ieRatio" style="color:#3498db; font-size: 11px; float: right; margin-top: 2px;">1:3.0</span></label>
                 <div class="digital-value" id="tiVal">1.0</div>
                 <input type="range" id="tiSlider" min="0.5" max="3.0" step="0.1" value="1.0" oninput="document.getElementById('tiVal').innerText = parseFloat(this.value).toFixed(1); checkAutoAsynchrony(); switchPatientVideo(); initAudioContext();">
             </div>
 
-            <div class="control-group">
-                <label for="piSlider">Pressure</label>
+            <div id="piGroup" class="control-group">
+                <label for="piSlider" id="piGroupLabel">Pressure (PC)</label>
                 <div class="ppeak-badge" id="ppeakDisplay">Ppeak: 20</div>
                 <div class="digital-value" id="piVal">15</div>
                 <input type="range" id="piSlider" min="5" max="30" value="15" oninput="document.getElementById('piVal').innerText = this.value; checkAutoAsynchrony(); switchPatientVideo(); initAudioContext();">
             </div>
 
-            <div class="control-group">
-                <label for="peepSlider">PEEP</label>
+            <div id="peepGroup" class="control-group">
+                <label for="peepSlider" id="peepGroupLabel">PEEP</label>
                 <div class="digital-value" id="peepVal">5</div>
                 <input type="range" id="peepSlider" min="0" max="20" value="5" oninput="document.getElementById('peepVal').innerText = this.value; initAudioContext();">
             </div>
 
-            <div class="control-group">
+            <div id="slopeGroup" class="control-group">
                 <label for="slopeSlider">Slope</label>
                 <div class="digital-value" id="slopeVal">0</div>
                 <input type="range" id="slopeSlider" min="0" max="10" value="0" oninput="document.getElementById('slopeVal').innerText = this.value; initAudioContext();">
+            </div>
+
+            <div id="tvGroup" class="control-group" style="display:none;">
+                <label for="tvSlider">Tidal Volume (TV)</label>
+                <div class="ppeak-badge" id="vcvPpeakDisplay">Ppeak: --</div>
+                <div class="digital-value" id="tvVal">450</div>
+                <input type="range" id="tvSlider" min="200" max="800" step="10" value="450" oninput="document.getElementById('tvVal').innerText = this.value; initAudioContext();">
+            </div>
+
+            <div id="vcvCycleGroup" class="control-group" style="display:none; align-items: flex-start;">
+                <label>Cycle Control (VCV)</label>
+                <div style="display:flex; gap:12px; font-size:12px; margin: 4px 0 8px;">
+                    <label style="display:flex; align-items:center; gap:4px; font-weight:normal;"><input type="radio" name="vcvCycleMode" value="ie" checked onchange="handleVcvCycleModeChange()"> ปรับด้วย I:E</label>
+                    <label style="display:flex; align-items:center; gap:4px; font-weight:normal;"><input type="radio" name="vcvCycleMode" value="flow" onchange="handleVcvCycleModeChange()"> ปรับด้วย Flow</label>
+                </div>
+                <div id="vcvIEControl" style="width:100%;">
+                    <label for="ieSlider" style="font-size:12px;">I:E = 1 : <span id="ieSliderVal">2.0</span></label>
+                    <input type="range" id="ieSlider" min="1.0" max="4.0" step="0.1" value="2.0" oninput="document.getElementById('ieSliderVal').innerText = parseFloat(this.value).toFixed(1); initAudioContext();">
+                    <div style="font-size:11px; color:#7f8c8d; margin-top:6px;">Flow (คำนวณ): <span id="vcvFlowReadout">-</span> L/min</div>
+                </div>
+                <div id="vcvFlowControl" style="width:100%; display:none;">
+                    <label for="vcvFlowSlider" style="font-size:12px;">Flow</label>
+                    <div class="digital-value" id="vcvFlowVal" style="font-size:20px;">40</div>
+                    <input type="range" id="vcvFlowSlider" min="20" max="80" step="1" value="40" oninput="document.getElementById('vcvFlowVal').innerText = this.value; initAudioContext();">
+                    <div style="font-size:11px; color:#7f8c8d; margin-top:6px;">I:E (คำนวณ): 1 : <span id="vcvIEReadout">-</span></div>
+                </div>
+            </div>
+
+            <div id="etsGroup" class="control-group" style="display:none;">
+                <label for="etsSlider">ETS (Cycle-off %)</label>
+                <div class="digital-value" id="etsVal">25</div>
+                <input type="range" id="etsSlider" min="1" max="80" step="1" value="25" oninput="document.getElementById('etsVal').innerText = this.value; initAudioContext();">
+            </div>
+
+            <div id="fio2Group" class="control-group">
+                <label for="fio2Slider">FiO2 (%)</label>
+                <div class="digital-value" id="fio2Val">40</div>
+                <input type="range" id="fio2Slider" min="21" max="100" step="1" value="40" oninput="document.getElementById('fio2Val').innerText = this.value; initAudioContext();">
+            </div>
+
+            <div id="flowTriggerGroup" class="control-group">
+                <label for="flowTriggerSlider">Flow Trigger (L/min)</label>
+                <div class="digital-value" id="flowTriggerVal">2.0</div>
+                <input type="range" id="flowTriggerSlider" min="0.5" max="5" step="0.1" value="2" oninput="document.getElementById('flowTriggerVal').innerText = parseFloat(this.value).toFixed(1); initAudioContext();">
             </div>
         </div>
 
         <button id="captureBtn" class="btn-capture" onclick="saveGraph()">📸 บันทึกภาพกราฟ (PNG)</button>
         <div id="saveStatus" class="status-msg"></div>
+    </div>
+
+    <!-- Popup อธิบายโหมดการหายใจ (ขึ้นอัตโนมัติเมื่อเปลี่ยน Mode) -->
+    <div id="modeInfoModal" class="modal">
+        <div class="modal-content" style="max-width: 640px;">
+            <span class="close-btn" onclick="document.getElementById('modeInfoModal').style.display='none'">&times;</span>
+            <h3 id="modeInfoTitle" style="margin-top: 0; border-bottom: 2px solid #3498db; padding-bottom: 10px;"></h3>
+            <p id="modeInfoText" style="font-size: 14px; line-height: 1.8; color: #34495e; text-align: left; white-space: pre-line; margin-bottom: 0;"></p>
+        </div>
     </div>
 
     <!-- Popup เข้าสู่โหมดสอบ (กรอกข้อมูล) -->
@@ -307,8 +360,8 @@
 
             <h4 style="color: #27ae60; margin-bottom: 5px; margin-top: 15px;">▶️ โหมดจำลองสถานการณ์ (สำหรับสอน)</h4>
             <ol style="color: #34495e; font-size: 14px; line-height: 1.6; margin-top: 5px; margin-bottom: 15px; padding-left: 20px;">
-                <li>เลือก Mode และ Flow Pattern ที่ต้องการจากแผงควบคุม</li>
-                <li>เลื่อนปรับแถบพารามิเตอร์ต่างๆ หรือเลือกความผิดปกติจากช่อง Asynchrony</li>
+                <li>เลือก Mode และ Controlled Variable ที่ต้องการจากแผงควบคุม (จะมีป๊อปอัพอธิบายโหมดขึ้นให้อัตโนมัติเมื่อเปลี่ยน Mode)</li>
+                <li>เลื่อนปรับแถบพารามิเตอร์ต่างๆ หรือเลือกความผิดปกติจากช่อง Dyssynchrony</li>
                 <li>สังเกตความเปลี่ยนแปลงของกราฟและอาการของผู้ป่วยจำลองผ่านหน้าจอ</li>
                 <li>อ่านคำอธิบายลักษณะกราฟและแนวทางการแก้ไขที่มุมซ้ายล่าง</li>
             </ol>
@@ -337,6 +390,105 @@
 
         // ⚠️ ต้องตรงกับค่า APP_SECRET ใน Code.gs
         const APP_SECRET = "VENT-SIM-2026-CHANGE-ME";
+
+        // ================= คำอธิบายแต่ละโหมด (Popup อัตโนมัติเมื่อเปลี่ยน Mode) =================
+        const modeInfoData = {
+            vcv: {
+                title: "VCV — Volume Control Ventilation",
+                text: "VCV หรือ volume control ventilation หรือ V-controlled continuous mandatory ventilation (VC-CMV) mode เป็น mode ที่เครื่องทำงานในลักษณะ F-controlled กล่าวคือ เครื่องควบคุมการไหลของก๊าซเข้าปอดให้เป็นไปตาม F waveform และ peak flow rate ที่ตั้งไว้ ความดันที่เกิดขึ้นเป็นผลลัพธ์จาก flow, resistance, และ compliance ส่วนปริมาตร (V) ที่ได้คำนวณได้จาก flow และ inspiratory time (TI) ถ้าควบคุม TI ได้ด้วย ก็จะได้ V คงที่ ในทางคลินิกจึงมักได้ชื่อว่า V-controlled ทั้งที่แท้จริงแล้วเป็น F-controlled"
+            },
+            pcv: {
+                title: "PCV — Pressure Control Ventilation",
+                text: "PCV หรือ pressure control ventilation หรือ P-controlled continuous mandatory ventilation (PC-CMV) mode เป็น mode ที่เครื่องทำงานในลักษณะ P-limited, P-controlled, T-cycled ventilation กล่าวคือ เครื่องควบคุมความดันในระบบ (ความดันที่เครื่อง) ให้เป็นค่าเดียวคงที่ (constant pressure หรือ square pressure waveform) ตามที่ตั้งไว้ (controlled P มักเรียกว่าระดับ PC) แล้วปล่อยให้เกิด flow ไหลเข้าปอดตามแรงดันระหว่างเครื่องและถุงลมปอด โดยเครื่องจะเปลี่ยนจากช่วงหายใจเข้าเป็นช่วงหายใจออกด้วยเวลา (T-cycled) ที่ตั้งไว้"
+            },
+            psv: {
+                title: "PSV — Pressure Support Ventilation",
+                text: "PSV หรือ pressure support ventilation (PSV) mode เป็น mode ที่เครื่องทำงานในลักษณะ P-limited, P-controlled, F-cycled กล่าวคือ เครื่องควบคุมความดันที่เครื่องเป็นค่าเดียวคงที่ตามที่ตั้งไว้ (controlled P มักเรียกว่าระดับ PS) แล้วปล่อยให้เกิด flow ไหลเข้าปอดตามแรงดันระหว่างเครื่องและถุงลมปอด โดยเครื่องจะเปลี่ยนจากช่วงหายใจเข้าเป็นช่วงหายใจออกเมื่อ flow ที่ไหลเข้าปอดลดลงถึงค่าที่ตั้งไว้ กล่าวคือเป็น F-cycled ค่า F ที่ใช้สั่งงานให้เครื่องเปลี่ยนเป็นช่วงหายใจออก เรียกว่า expiratory trigger sensitivity (ETS) มักเป็น % ของ peak inspiratory flow"
+            },
+            cpap: {
+                title: "CPAP / SV — Spontaneous Ventilation",
+                text: "SV (spontaneous ventilation) mode หรือ CPAP (continuous positive airway pressure) mode หรือ SV/CPAP mode เป็น mode ที่เครื่องทำงานในลักษณะ P-limited, P-controlled ที่เครื่องควบคุมความดันที่เครื่องเป็นค่าเดียวกับ baseline P (expiratory P) ตลอดเวลา ก๊าซที่ไหลเข้าปอดจะเกิดจากแรงที่กล้ามเนื้อหายใจทำเองทั้งหมด โดยไม่มีการช่วยหายใจเข้าจากเครื่อง ถ้า baseline P เป็น 0 เท่าบรรยากาศ เรียกว่า SV mode ถ้า baseline P มีค่าเป็นบวก เรียกว่า CPAP mode หน้าปัดเครื่องช่วยหายใจมักใช้ปุ่มเดียวกัน คือ SV/CPAP mode"
+            }
+        };
+
+        function showModeInfoPopup(mode) {
+            const info = modeInfoData[mode];
+            if (!info) return;
+            document.getElementById('modeInfoTitle').innerText = info.title;
+            document.getElementById('modeInfoText').innerText = info.text;
+            document.getElementById('modeInfoModal').style.display = 'block';
+        }
+
+        // ================= ตัวเลือก Controlled Variable ที่ใช้ได้ในแต่ละโหมด =================
+        const controlledVariableOptions = {
+            vcv: [
+                { value: 'square', text: 'Square Flow' },
+                { value: 'decel', text: 'Decelerating Flow' },
+                { value: 'sine', text: 'Sine Flow' }
+            ],
+            pcv: [
+                { value: 'decel', text: 'Square Pressure Pattern' }
+            ],
+            psv: [
+                { value: 'decel', text: 'Decelerating Flow' },
+                { value: 'sine', text: 'Sine Flow' }
+            ],
+            cpap: [
+                { value: 'sine', text: 'Sine Flow (Spontaneous)' }
+            ]
+        };
+
+        function updateControlledVariableOptions(mode) {
+            const select = document.getElementById('flowSelect');
+            const opts = controlledVariableOptions[mode] || controlledVariableOptions.pcv;
+            const prevValue = select.value;
+            select.innerHTML = '';
+            opts.forEach(function (o) {
+                const el = document.createElement('option');
+                el.value = o.value; el.textContent = o.text;
+                select.appendChild(el);
+            });
+            select.value = opts.some(function (o) { return o.value === prevValue; }) ? prevValue : opts[0].value;
+            select.disabled = opts.length === 1;
+        }
+
+        // ================= แสดง/ซ่อนพารามิเตอร์ที่ปรับได้ ให้ตรงตามแต่ละโหมด =================
+        function applyModeParamVisibility(mode) {
+            function show(id, visible) { document.getElementById(id).style.display = visible ? '' : 'none'; }
+
+            show('rrGroup', mode !== 'cpap');
+            show('tiGroup', mode === 'pcv');
+            show('piGroup', mode === 'pcv' || mode === 'psv');
+            show('slopeGroup', mode === 'pcv' || mode === 'psv');
+            show('tvGroup', mode === 'vcv');
+            show('vcvCycleGroup', mode === 'vcv');
+            show('etsGroup', mode === 'psv');
+
+            document.getElementById('piGroupLabel').innerText = (mode === 'psv') ? 'PS (Pressure Support)' : 'Pressure (PC)';
+            document.getElementById('peepGroupLabel').innerText = (mode === 'cpap') ? 'CPAP' : 'PEEP';
+
+            const abnormalGroup = document.getElementById('abnormalControlGroup');
+            if (mode === 'cpap') {
+                abnormalGroup.style.display = 'none';
+                document.getElementById('abnormalSelect').value = 'normal';
+            } else if (currentExamType === 'none') {
+                abnormalGroup.style.display = 'flex';
+            }
+        }
+
+        function handleVcvCycleModeChange() {
+            const mode = document.querySelector('input[name="vcvCycleMode"]:checked').value;
+            document.getElementById('vcvIEControl').style.display = (mode === 'ie') ? 'block' : 'none';
+            document.getElementById('vcvFlowControl').style.display = (mode === 'flow') ? 'block' : 'none';
+        }
+
+        function handleModeChange() {
+            const mode = document.getElementById('modeSelect').value;
+            updateControlledVariableOptions(mode);
+            applyModeParamVisibility(mode);
+            if (currentExamType === 'none') showModeInfoPopup(mode);
+            handleModeFlowChange();
+        }
 
         const patientVideos = {
             'normal': 'Rest.mp4', 'scoop_mild': 'Respi.mp4', 'scoop_severe': 'Airhunger.mp4',
@@ -591,6 +743,12 @@
             document.getElementById('piSlider').disabled = isDisabled;
             document.getElementById('peepSlider').disabled = isDisabled;
             document.getElementById('slopeSlider').disabled = isDisabled;
+            document.getElementById('tvSlider').disabled = isDisabled;
+            document.getElementById('etsSlider').disabled = isDisabled;
+            document.getElementById('fio2Slider').disabled = isDisabled;
+            document.getElementById('flowTriggerSlider').disabled = isDisabled;
+            document.getElementById('ieSlider').disabled = isDisabled;
+            document.getElementById('vcvFlowSlider').disabled = isDisabled;
         }
 
         function loadQuestionUI() {
@@ -619,6 +777,9 @@
                 scenarioBaseline = { rr: q.init.rr, ti: q.init.ti, pi: q.init.pi };
             }
 
+            const examMode = document.getElementById('modeSelect').value;
+            updateControlledVariableOptions(examMode);
+            applyModeParamVisibility(examMode);
             switchPatientVideo();
         }
 
@@ -922,21 +1083,13 @@
 
         function handleModeFlowChange() {
             initAudioContext();
-            const mode = document.getElementById('modeSelect').value;
-            const flowType = document.getElementById('flowSelect').value;
-            const abnormalSelect = document.getElementById('abnormalSelect');
-
-            if (mode === 'pcv' && flowType === 'sine' && abnormalSelect.value === 'normal') {
-                abnormalSelect.value = 'scoop_mild';
-            } else if (abnormalSelect.value === 'scoop_mild' && !(mode === 'pcv' && flowType === 'sine')) {
-                abnormalSelect.value = 'normal';
-            }
             checkAutoAsynchrony();
             switchPatientVideo();
         }
 
         function checkAutoAsynchrony() {
             if (currentExamType !== 'none') return;
+            if (document.getElementById('modeSelect').value === 'cpap') return;
 
             let rr = parseInt(document.getElementById('rrSlider').value);
             let tiSetting = parseFloat(document.getElementById('tiSlider').value);
@@ -960,6 +1113,18 @@
             }
         }
 
+        // รีเซ็ตพารามิเตอร์ชุดใหม่ (TV/ETS/FiO2/Flow Trigger/I:E-Flow ของ VCV) กลับเป็นค่าเริ่มต้น
+        function resetNewParamsToDefault() {
+            document.getElementById('tvSlider').value = 450; document.getElementById('tvVal').innerText = '450';
+            document.getElementById('etsSlider').value = 25; document.getElementById('etsVal').innerText = '25';
+            document.getElementById('fio2Slider').value = 40; document.getElementById('fio2Val').innerText = '40';
+            document.getElementById('flowTriggerSlider').value = 2; document.getElementById('flowTriggerVal').innerText = '2.0';
+            document.getElementById('ieSlider').value = 2.0; document.getElementById('ieSliderVal').innerText = '2.0';
+            document.getElementById('vcvFlowSlider').value = 40; document.getElementById('vcvFlowVal').innerText = '40';
+            document.querySelector('input[name="vcvCycleMode"][value="ie"]').checked = true;
+            handleVcvCycleModeChange();
+        }
+
         function resetGraphOnly() {
             // ปุ่มรีเซ็ตกราฟด่วนสำหรับโหมดจำลอง (ไม่กระทบข้อมูลโหมดสอบ)
             if (currentExamType !== 'none') return;
@@ -973,7 +1138,10 @@
             document.getElementById('piSlider').value = 15; document.getElementById('piVal').innerText = '15';
             document.getElementById('peepSlider').value = 5; document.getElementById('peepVal').innerText = '5';
             document.getElementById('slopeSlider').value = 0; document.getElementById('slopeVal').innerText = '0';
+            resetNewParamsToDefault();
             scenarioBaseline = { rr: 15, ti: 1.0, pi: 15 };
+            updateControlledVariableOptions('pcv');
+            applyModeParamVisibility('pcv');
             switchPatientVideo(true);
         }
 
@@ -1008,6 +1176,9 @@
             document.getElementById('piSlider').value = 15; document.getElementById('piVal').innerText = '15';
             document.getElementById('peepSlider').value = 5; document.getElementById('peepVal').innerText = '5';
             document.getElementById('slopeSlider').value = 0; document.getElementById('slopeVal').innerText = '0';
+            resetNewParamsToDefault();
+            updateControlledVariableOptions('pcv');
+            applyModeParamVisibility('pcv');
 
             let nextBtn = document.getElementById('nextQuestionBtn');
             nextBtn.onclick = loadNextQuestion;
@@ -1035,8 +1206,7 @@
 
             let videoKey = abnormalState;
             if (abnormalState === 'normal') {
-                if (mode === 'pcv' && flowType === 'sine') videoKey = 'scoop_mild';
-                else if (mode === 'psv' && flowType === 'decel') videoKey = 'over_assist';
+                if (mode === 'psv' && flowType === 'decel') videoKey = 'over_assist';
             }
             let targetSrc = patientVideos[videoKey];
             if (targetSrc && (force || !videoEl.src.endsWith(targetSrc))) {
@@ -1061,7 +1231,13 @@
             } catch (error) {
                 console.warn('โหลดค่าตั้งต้นจาก GAS ไม่สำเร็จ ใช้ค่า default ในหน้าเว็บแทน:', error);
             }
-            finally { checkAutoAsynchrony(); switchPatientVideo(); }
+            finally {
+                const loadedMode = document.getElementById('modeSelect').value;
+                updateControlledVariableOptions(loadedMode);
+                applyModeParamVisibility(loadedMode);
+                checkAutoAsynchrony();
+                switchPatientVideo();
+            }
         }
 
         window.onload = fetchSettingsFromGAS;
@@ -1081,7 +1257,14 @@
             peepSlider: document.getElementById('peepSlider'),
             slopeSlider: document.getElementById('slopeSlider'),
             tiSlider: document.getElementById('tiSlider'),
+            tvSlider: document.getElementById('tvSlider'),
+            etsSlider: document.getElementById('etsSlider'),
+            ieSlider: document.getElementById('ieSlider'),
+            vcvFlowSlider: document.getElementById('vcvFlowSlider'),
             ppeakDisplay: document.getElementById('ppeakDisplay'),
+            vcvPpeakDisplay: document.getElementById('vcvPpeakDisplay'),
+            vcvFlowReadout: document.getElementById('vcvFlowReadout'),
+            vcvIEReadout: document.getElementById('vcvIEReadout'),
             ieRatio: document.getElementById('ieRatio'),
             ventScreen: document.getElementById('ventScreen'),
             breathPhaseBadge: document.getElementById('breathPhaseBadge'),
@@ -1123,7 +1306,7 @@
                 { label: 'Pressure เว้าแหว่ง (ผู้ป่วยออกแรงเอง)', getTime: (cyc, ti) => ti * 0.5, y: 160, style: 'up' }
             ],
             scoop_severe: [
-                { label: 'Pressure เว้าลึก (ออกแรงมาก)', getTime: (cyc, ti) => ti * 0.5, y: 168, style: 'up' }
+                { label: 'Pressure เว้าลึก (Flow Starvation)', getTime: (cyc, ti) => ti * 0.5, y: 168, style: 'up' }
             ],
             prolong: [
                 { label: 'Pressure สูงขึ้นช่วงท้าย Ti (ฝืนหายใจออก)', getTime: (cyc, ti) => ti - 10, y: 100 }
@@ -1208,14 +1391,58 @@
             const slope = parseInt(domCache.slopeSlider.value);
             let tiSetting = parseFloat(domCache.tiSlider.value);
 
-            const ppeak = pi + peep;
-            domCache.ppeakDisplay.innerText = "Ppeak: " + ppeak;
-
             if (abnormal === 'auto_trigger') rr += 15;
 
             const cycleTimeSec = 60 / rr;
             const cycleLength = cycleTimeSec * PIXELS_PER_SECOND;
-            if(tiSetting >= cycleTimeSec - 0.2) tiSetting = cycleTimeSec - 0.2;
+
+            const PRESSURE_SCALE = 3.5; // px ต่อ cmH2O
+            const FLOW_SCALE = 70 / 60; // px ต่อ L/min
+            const flowZeroY = 290;
+
+            let amplitude = pi * PRESSURE_SCALE;
+            let ppeak = pi + peep;
+
+            // ---- VCV: ปริมาตร (TV) เป็นตัวควบคุม ความดันที่เกิดขึ้นเป็น "ผลลัพธ์" จาก flow/compliance/resistance ----
+            if (mode === 'vcv') {
+                const tv = parseInt(domCache.tvSlider.value) || 450; // mL
+                const COMPLIANCE = 50; // mL/cmH2O (สมมติค่าปอดปกติ เพื่อการสาธิตเชิงคุณภาพ)
+                const RESISTANCE = 10; // cmH2O/L/s
+                const cycleModeInput = document.querySelector('input[name="vcvCycleMode"]:checked');
+                const cycleBy = cycleModeInput ? cycleModeInput.value : 'ie';
+                let vcvFlowLpm;
+                if (cycleBy === 'flow') {
+                    vcvFlowLpm = parseFloat(domCache.vcvFlowSlider.value) || 40;
+                    tiSetting = (tv / 1000) * 60 / vcvFlowLpm;
+                } else {
+                    const ieVal = parseFloat(domCache.ieSlider.value) || 2.0;
+                    tiSetting = cycleTimeSec / (1 + ieVal);
+                    vcvFlowLpm = (tv / 1000) * 60 / tiSetting;
+                }
+                const elasticP = tv / COMPLIANCE;
+                const resistiveP = (vcvFlowLpm / 60) * RESISTANCE;
+                amplitude = (elasticP + resistiveP) * PRESSURE_SCALE;
+                ppeak = peep + elasticP + resistiveP;
+                domCache.vcvFlowReadout.innerText = vcvFlowLpm.toFixed(0);
+                domCache.vcvIEReadout.innerText = ((cycleTimeSec - tiSetting) / tiSetting).toFixed(1);
+                domCache.vcvPpeakDisplay.innerText = "Ppeak: " + ppeak.toFixed(0);
+            }
+            // ---- PSV: F-cycled จริง ๆ ค่า ETS (% ของ peak flow) เป็นตัวกำหนดว่า Ti ยาวแค่ไหน ----
+            else if (mode === 'psv') {
+                const etsVal = parseInt(domCache.etsSlider.value) || 25;
+                const etsFrac = Math.max(1, Math.min(80, etsVal)) / 100;
+                tiSetting = (-30 * Math.log(etsFrac)) / PIXELS_PER_SECOND;
+            }
+            // ---- CPAP/SV: ไม่มีความดันเหนือ baseline เลย Ppeak จึงเท่ากับระดับ CPAP ----
+            else if (mode === 'cpap') {
+                amplitude = 0;
+                ppeak = peep;
+            }
+
+            if (tiSetting >= cycleTimeSec - 0.15) tiSetting = cycleTimeSec - 0.15;
+            if (tiSetting < 0.15) tiSetting = 0.15;
+
+            domCache.ppeakDisplay.innerText = "Ppeak: " + Math.round(ppeak);
 
             let drawTiLength = tiSetting * PIXELS_PER_SECOND;
             if (abnormal === 'premature_cycle') drawTiLength = drawTiLength * 0.6;
@@ -1232,6 +1459,8 @@
                 if (isPracticalFixed) { abnormal = 'normal'; } else { abnormal = q.id; }
             } else if (currentExamType === 'theory') {
                 abnormal = examQuestions[currentQIndex].id;
+            } else if (mode === 'cpap') {
+                abnormal = 'normal';
             } else {
                 if (abnormal === 'normal') {
                     if (teTimeSec < 0.65) { abnormal = 'autopeep'; isAutoDetected = true; }
@@ -1239,16 +1468,44 @@
                 }
             }
 
-            const amplitude = pi * 3.5;
+            // เส้น Baseline อ้างอิงจริงของ PEEP/CPAP (มีค่าตามสไลเดอร์จริง แทนเส้นคงที่แบบเดิม)
+            const peepY = 140 - peep * PRESSURE_SCALE;
 
             ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 1;
             for(let i=0; i<canvas.width; i+=50) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
             for(let i=0; i<canvas.height; i+=50) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke(); }
 
-            ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
-            ctx.beginPath(); ctx.moveTo(0, 140); ctx.lineTo(canvas.width, 140); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(0, 290); ctx.lineTo(canvas.width, 290); ctx.stroke();
+            // ---- สเกลแกน (cmH2O / L·min-1) ให้เห็นค่า PI, PEEP, Flow ได้ถูกต้องตามหน่วยจริง ----
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+            ctx.fillStyle = '#95a5a6'; ctx.font = '10px Sarabun, Arial'; ctx.textAlign = 'left';
+            for (let v = 0; v <= 40; v += 10) {
+                const yy = 140 - v * PRESSURE_SCALE;
+                if (yy < 4 || yy > 136) continue;
+                ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(canvas.width, yy); ctx.stroke();
+                ctx.fillText(v, 4, yy - 2);
+            }
+            for (let v = -60; v <= 60; v += 20) {
+                if (v === 0) continue;
+                const yy = flowZeroY - v * FLOW_SCALE;
+                ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(canvas.width, yy); ctx.stroke();
+                ctx.fillText(v, 4, yy - 2);
+            }
+            ctx.restore();
+
+            // เส้น Baseline จริงของ PEEP/CPAP + เส้นศูนย์ของ Flow
+            ctx.save();
+            ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
+            ctx.beginPath(); ctx.moveTo(0, peepY); ctx.lineTo(canvas.width, peepY); ctx.stroke();
             ctx.setLineDash([]);
+            ctx.fillStyle = '#e67e22'; ctx.font = 'bold 11px Sarabun, Arial'; ctx.textAlign = 'right';
+            ctx.fillText((mode === 'cpap' ? 'CPAP ' : 'PEEP ') + peep, canvas.width - 6, peepY - 4);
+
+            ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
+            ctx.beginPath(); ctx.moveTo(0, flowZeroY); ctx.lineTo(canvas.width, flowZeroY); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+            ctx.textAlign = 'left';
 
             ctx.lineWidth = 3;
             ctx.beginPath(); const pressPath = new Path2D();
@@ -1256,9 +1513,22 @@
 
             let xOffset = t % (canvas.width + 100);
 
+            // ---- CPAP/SV: หายใจเองล้วน ไม่มี mandatory breath ใช้อัตราหายใจเองคงที่เพื่อการแสดงผล ----
+            const CPAP_SPONT_RR = 16;
+            const cpapCycleLen = (60 / CPAP_SPONT_RR) * PIXELS_PER_SECOND;
+
             for(let x = 0; x < canvas.width; x++) {
-                let time = ((x - xOffset + canvas.width + 100) % cycleLength);
-                let p_y = 140; let f_y = 290;
+                let p_y, f_y, time;
+
+                if (mode === 'cpap') {
+                    let cpapTime = ((x - xOffset + canvas.width + 100) % cpapCycleLen);
+                    let phaseAngle = (cpapTime / cpapCycleLen) * Math.PI * 2;
+                    p_y = peepY - Math.sin(phaseAngle) * 2.5;
+                    f_y = flowZeroY - Math.sin(phaseAngle) * 35;
+                    time = cpapTime;
+                } else {
+                time = ((x - xOffset + canvas.width + 100) % cycleLength);
+                p_y = peepY; f_y = flowZeroY;
 
                 let flowRiseSlope = Math.min(time / (slope * 4 + 0.1), 1);
 
@@ -1269,30 +1539,43 @@
                     if (time >= dtStart && time < dtEnd) {
                         isDoubleTriggerBreath = true;
                         let fakeTime = time - dtStart;
-                        p_y = 140 - (fakeTime / drawTiLength) * amplitude - 10;
-                        f_y = 290 - 70 * Math.exp(-fakeTime/20);
+                        p_y = peepY - (fakeTime / drawTiLength) * amplitude - 10;
+                        f_y = flowZeroY - 70 * Math.exp(-fakeTime/20);
                     }
                 }
 
                 if (time < drawTiLength && !isDoubleTriggerBreath) {
                     if(mode === 'psv' && time < 8) p_y += 12;
-                    if(mode === 'cmv') { p_y = 140 - (time / drawTiLength) * amplitude; }
-                    else { p_y = 140 - amplitude; }
 
-                    if (flowType === 'square') f_y = 290 - 70 * flowRiseSlope;
-                    else if (flowType === 'decel') f_y = 290 - (70 * flowRiseSlope) * Math.exp(-time/30);
-                    else if (flowType === 'sine') f_y = 290 - Math.sin((time / drawTiLength) * Math.PI) * 70 * flowRiseSlope;
+                    if (mode === 'vcv' && flowType === 'square') {
+                        if (time < drawTiLength * 0.5) {
+                            p_y = peepY - amplitude * 0.15;
+                        } else {
+                            let frac = (time - drawTiLength * 0.5) / (drawTiLength * 0.5);
+                            p_y = peepY - (0.15 + frac * 0.85) * amplitude;
+                        }
+                    } else if (mode === 'vcv' && flowType === 'sine') {
+                        p_y = peepY - amplitude * (1 - Math.cos((time / drawTiLength) * Math.PI)) / 2;
+                    } else if (mode === 'vcv') {
+                        p_y = peepY - (time / drawTiLength) * amplitude;
+                    } else {
+                        p_y = peepY - amplitude;
+                    }
+
+                    if (flowType === 'square') f_y = flowZeroY - 70 * flowRiseSlope;
+                    else if (flowType === 'decel') f_y = flowZeroY - (70 * flowRiseSlope) * Math.exp(-time/30);
+                    else if (flowType === 'sine') f_y = flowZeroY - Math.sin((time / drawTiLength) * Math.PI) * 70 * flowRiseSlope;
 
                     if(abnormal === 'scoop_mild') p_y += Math.sin((time / drawTiLength) * Math.PI) * 6;
                     if(abnormal === 'scoop_severe') p_y += Math.sin((time / drawTiLength) * Math.PI) * 15;
-                    if(abnormal === 'delay_cycle' && time > drawTiLength - 25) { p_y -= 25; f_y = 290 + 20; }
+                    if(abnormal === 'delay_cycle' && time > drawTiLength - 25) { p_y -= 25; f_y = flowZeroY + 20; }
 
                 } else if (!isDoubleTriggerBreath) {
                     let expTime = time - drawTiLength;
-                    p_y = 140 - amplitude * Math.exp(-expTime/15);
+                    p_y = peepY - amplitude * Math.exp(-expTime/15);
 
-                    if(abnormal === 'autopeep') { f_y = 290 + 75 * Math.exp(-expTime/80); }
-                    else { f_y = 290 + 75 * Math.exp(-expTime/20); }
+                    if(abnormal === 'autopeep') { f_y = flowZeroY + 75 * Math.exp(-expTime/80); }
+                    else { f_y = flowZeroY + 75 * Math.exp(-expTime/20); }
 
                     if(abnormal === 'auto_trigger') f_y -= 15;
 
@@ -1310,8 +1593,10 @@
                 }
 
                 if (abnormal === 'sawtooth') {
-                    let noise = Math.sin(time * 0.8) * 4;
-                    p_y += noise * 0.5; f_y += noise;
+                    // ปรับให้เป็นคลื่นผสม 2 ความถี่ต่ำ แอมพลิจูดน้อยลง ให้ดูเป็นการสั่นตามธรรมชาติ แทนฟันเลื่อยแข็ง ๆ
+                    let noise = Math.sin(time * 0.35) * 2 + Math.sin(time * 0.9) * 1;
+                    p_y += noise * 0.4; f_y += noise * 1.2;
+                }
                 }
 
                 if(x === 0) { pressPath.moveTo(x, p_y); flowPath.moveTo(x, f_y); }
@@ -1325,7 +1610,7 @@
             ctx.fillStyle = '#2ecc71'; ctx.fillText('Flow (L/min)', 10, 175);
 
             // ชี้จุดผิดปกติด้วยลูกศร เฉพาะโหมดจำลอง/สอน (ไม่ใช่ระหว่างสอบ) และเมื่อผู้ใช้เปิดการแสดงลูกศรไว้
-            if (showMarkers && currentExamType === 'none' && abnormalMarkers[abnormal]) {
+            if (showMarkers && currentExamType === 'none' && mode !== 'cpap' && abnormalMarkers[abnormal]) {
                 abnormalMarkers[abnormal].forEach(function (marker) {
                     const mTime = marker.getTime(cycleLength, drawTiLength);
                     const mx = findMarkerX(mTime, cycleLength, xOffset, canvas.width);
@@ -1333,8 +1618,14 @@
                 });
             }
 
-            let rightEdgeTime = ((canvas.width - 1 - xOffset + canvas.width + 100) % cycleLength);
-            let phase = rightEdgeTime < drawTiLength ? 'Insp' : 'Exp';
+            let phase;
+            if (mode === 'cpap') {
+                let cpapRightTime = ((canvas.width - 1 - xOffset + canvas.width + 100) % cpapCycleLen);
+                phase = Math.sin((cpapRightTime / cpapCycleLen) * Math.PI * 2) > 0 ? 'Insp' : 'Exp';
+            } else {
+                let rightEdgeTime = ((canvas.width - 1 - xOffset + canvas.width + 100) % cycleLength);
+                phase = rightEdgeTime < drawTiLength ? 'Insp' : 'Exp';
+            }
 
             if (phase === 'Insp') {
                 domCache.ventScreen.style.background = '#2ecc71'; domCache.ventScreen.style.boxShadow = '0 0 15px #2ecc71';
@@ -1344,7 +1635,7 @@
                 domCache.breathPhaseBadge.innerText = 'หายใจออก (Exhalation)'; domCache.breathPhaseBadge.style.background = '#e74c3c'; domCache.breathPhaseBadge.style.color = 'white';
             }
 
-            if (abnormal === 'normal' && mode === 'pcv' && flowType === 'sine') { currentActualAbnormal = 'scoop_mild'; }
+            if (mode === 'cpap') { currentActualAbnormal = 'normal'; }
             else if (abnormal === 'normal' && mode === 'psv' && flowType === 'decel') { currentActualAbnormal = 'over_assist'; }
             else { currentActualAbnormal = abnormal; }
 
@@ -1352,7 +1643,12 @@
             let guideTxt = "สังเกตอาการทั่วไปและติดตามค่าพารามิเตอร์";
             let waveDesc = "กราฟ Pressure เป็น square wave (สี่เหลี่ยม) และ Flow เป็น decelerate ผู้ป่วยไม่ออกแรงเอง สอดคล้องกับการตั้งค่าเพื่อให้ผู้ป่วยได้พัก";
 
-            if (ppeak > 35) {
+            if (mode === 'cpap') {
+                txt = "ปกติ (Spontaneous Breathing on CPAP)"; col = "#27ae60";
+                guideTxt = "ผู้ป่วยหายใจเองทั้งหมด ไม่มีการช่วยหายใจจากเครื่อง ติดตามอัตราการหายใจและความสม่ำเสมอของผู้ป่วย";
+                waveDesc = "กราฟ Pressure ค่อนข้างคงที่ที่ระดับ CPAP ตลอดเวลา ส่วนกราฟ Flow เป็นคลื่นไซน์สลับบวก/ลบตามจังหวะหายใจเข้า-ออกเองของผู้ป่วย";
+            }
+            else if (ppeak > 35) {
                 txt = "🚨 เตือน: ระวัง Barotrauma (Ppeak > 35 cmH2O)"; col = "#c0392b";
                 guideTxt = "ลด Pressure/Volume, ลด PEEP, ตรวจสอบภาวะลมรั่วในช่องอก (Pneumothorax) หรือทางเดินหายใจอุดกั้น";
                 waveDesc = "กราฟ Pressure พุ่งสูงเกินกว่า 35 cmH2O ซึ่งเสี่ยงต่อการเกิดถุงลมโป่งพองแตก";
@@ -1399,9 +1695,9 @@
                 waveDesc = "กราฟ Pressure ขาเข้ามีลักษณะเว้าแหว่ง (Scooped out) โค้งลงเล็กน้อย แสดงถึงการออกแรงสูดช่วยของผู้ป่วย";
             }
             else if (abnormal === 'scoop_severe') {
-                txt = "🚨 เตือน: Pressure Scooped out (Severe Flow starvation)"; col = "#c0392b";
+                txt = "🚨 เตือน: Flow Starvation"; col = "#c0392b";
                 guideTxt = "เร่งการจ่าย Flow/Pressure ทันที, เปลี่ยนโหมดให้ตอบสนองผู้ป่วยดีขึ้น และหาสาเหตุของการหอบ";
-                waveDesc = "กราฟ Pressure ขาเข้าเว้าลึกลงอย่างชัดเจนจนเสียรูปทรง เครื่องจ่าย Flow ให้ไม่ทันความต้องการ";
+                waveDesc = "กราฟ Pressure ขาเข้าเว้าลึกลงอย่างชัดเจนจนเสียรูปทรง เครื่องจ่าย Flow ให้ไม่ทันความต้องการ (Flow Starvation)";
             }
             else if (abnormal === 'prolong') {
                 txt = isAutoDetected ? "⚠️ เตือน: Active Exhalation (ตรวจพบอัตโนมัติจากการตั้งค่า Ti นานไป)" : "⚠️ เตือน: Active Exhalation (ฝืนหายใจออก)";
@@ -1410,12 +1706,7 @@
                 waveDesc = "ผู้ป่วยพยายามฝืนเบ่งหายใจออกขณะเครื่องยังจ่ายลมเข้า ทำให้กราฟ Pressure พุ่งสูงขึ้นในช่วงท้าย Ti";
             }
             else if (abnormal === 'normal') {
-                if (mode === 'pcv' && flowType === 'sine') {
-                    txt = "⚠️ ข้อสังเกต: ผู้ป่วยอาจมีอาการ Pressure Scooped out (Flow starvation)"; col = "#e67e22";
-                    guideTxt = "ผู้ป่วยอาจออกแรงช่วยหายใจเอง ควรประเมินการตั้งค่า Pressure/Flow ว่าเพียงพอต่อผู้ป่วยหรือไม่";
-                    waveDesc = "กราฟ Pressure เป็น square wave (สี่เหลี่ยม) แต่กราฟ Flow เป็นรูป Sine wave บ่งชี้ว่าผู้ป่วยดึง Flow เองจากกล้ามเนื้อช่วยหายใจ";
-                }
-                else if (mode === 'psv' && flowType === 'decel') {
+                if (mode === 'psv' && flowType === 'decel') {
                     txt = "⚠️ ข้อสังเกต: การช่วยเหลืออาจมากเกินไป (Over-assist)"; col = "#e67e22";
                     guideTxt = "อาจลดระดับ Pressure Support ลง หรือปรับ Flow cycle-off (ETS) ให้เหมาะสมเพื่อป้องกันการช่วยเกิน";
                     waveDesc = "กราฟ Flow ขาเข้ามีลักษณะลาดลง (Decelerating) ยาวนาน อาจเกิดจาก Pressure Support ที่สูงเกินไป";
