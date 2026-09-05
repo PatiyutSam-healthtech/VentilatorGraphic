@@ -39,7 +39,6 @@
 
         .bed-scene { position: relative; width: 100%; height: 200px; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 15px; box-shadow: inset 0 4px 10px rgba(0,0,0,0.1); border: 2px solid #bdc3c7; }
         .patient-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; transition: opacity 0.3s; }
-        .vent-screen-light { position: absolute; left: 20px; bottom: 20px; width: 15px; height: 15px; background: #34495e; z-index: 2; border-radius: 50%; opacity: 0.9; transition: background 0.1s, box-shadow 0.1s; }
 
         .status-box { background: white; padding: 12px; border-radius: 6px; border: 1px solid #bdc3c7; text-align: left; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.3s;}
         .status-box p { margin: 5px 0; }
@@ -113,7 +112,6 @@
 
                 <div class="bed-scene">
                     <video id="patientVideo" src="" class="patient-video" autoplay loop muted playsinline></video>
-                    <div id="ventScreen" class="vent-screen-light"></div>
                 </div>
 
                 <div class="status-box">
@@ -1277,7 +1275,6 @@
             vcvFlowReadout: document.getElementById('vcvFlowReadout'),
             vcvIEReadout: document.getElementById('vcvIEReadout'),
             ieRatio: document.getElementById('ieRatio'),
-            ventScreen: document.getElementById('ventScreen'),
             breathPhaseBadge: document.getElementById('breathPhaseBadge'),
             clinicalStatusText: document.getElementById('clinicalStatusText'),
             guidelineText: document.getElementById('guidelineText'),
@@ -1690,10 +1687,8 @@
             }
 
             if (phase === 'Insp') {
-                domCache.ventScreen.style.background = '#2ecc71'; domCache.ventScreen.style.boxShadow = '0 0 15px #2ecc71';
                 domCache.breathPhaseBadge.innerText = 'หายใจเข้า (Inspiration)'; domCache.breathPhaseBadge.style.background = '#2ecc71'; domCache.breathPhaseBadge.style.color = 'white';
             } else {
-                domCache.ventScreen.style.background = '#34495e'; domCache.ventScreen.style.boxShadow = 'none';
                 domCache.breathPhaseBadge.innerText = 'หายใจออก (Exhalation)'; domCache.breathPhaseBadge.style.background = '#e74c3c'; domCache.breathPhaseBadge.style.color = 'white';
             }
 
