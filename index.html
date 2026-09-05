@@ -295,7 +295,7 @@
             <div id="flowTriggerGroup" class="control-group">
                 <label for="flowTriggerSlider">Flow Trigger (L/min)</label>
                 <div class="digital-value" id="flowTriggerVal">2.0</div>
-                <input type="range" id="flowTriggerSlider" min="0.5" max="5" step="0.1" value="2" oninput="document.getElementById('flowTriggerVal').innerText = parseFloat(this.value).toFixed(1); initAudioContext();">
+                <input type="range" id="flowTriggerSlider" min="0.5" max="5" step="0.1" value="2" oninput="document.getElementById('flowTriggerVal').innerText = parseFloat(this.value).toFixed(1); checkAutoAsynchrony(); switchPatientVideo(); initAudioContext();">
             </div>
         </div>
 
@@ -456,7 +456,7 @@
         function applyModeParamVisibility(mode) {
             function show(id, visible) { document.getElementById(id).style.display = visible ? '' : 'none'; }
 
-            show('rrGroup', mode !== 'cpap');
+            show('rrGroup', mode === 'pcv' || mode === 'vcv');
             show('tiGroup', mode === 'pcv');
             show('piGroup', mode === 'pcv' || mode === 'psv');
             show('slopeGroup', mode === 'pcv' || mode === 'psv');
@@ -789,6 +789,7 @@
             let rr = parseInt(document.getElementById('rrSlider').value);
             let ti = parseFloat(document.getElementById('tiSlider').value);
             let pi = parseInt(document.getElementById('piSlider').value);
+            let flowTrigger = parseFloat(document.getElementById('flowTriggerSlider').value);
             let te = (60/rr) - ti;
             let base = scenarioBaseline;
 
@@ -799,6 +800,8 @@
             if (abnormalId === 'scoop_mild' && pi >= base.pi + 3) return true;
             if (abnormalId === 'sawtooth' && actionTaken === 'suction') return true;
             if (abnormalId === 'auto_trigger' && actionTaken === 'fix_leak') return true;
+            // ปรับ Flow Trigger ให้ไวขึ้น (ค่าตัวเลขต่ำลง) แก้ปัญหาเครื่องไม่ตอบสนองแรงดูดผู้ป่วย
+            if (abnormalId === 'trigger_fail' && flowTrigger <= 1.0) return true;
             return false;
         }
 
@@ -1493,17 +1496,21 @@
             }
             ctx.restore();
 
-            // เส้น Baseline จริงของ PEEP/CPAP + เส้นศูนย์ของ Flow
+            // เส้น Zero line ของ Pressure (0 cmH2O) และของ Flow (0 L/min) + เส้น Baseline จริงของ PEEP/CPAP
             ctx.save();
+            ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
+            ctx.beginPath(); ctx.moveTo(0, 140); ctx.lineTo(canvas.width, 140); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, flowZeroY); ctx.lineTo(canvas.width, flowZeroY); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#bdc3c7'; ctx.font = 'bold 10px Sarabun, Arial'; ctx.textAlign = 'right';
+            ctx.fillText('0', canvas.width - 6, 140 - 3);
+            ctx.fillText('0', canvas.width - 6, flowZeroY - 3);
+
             ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
             ctx.beginPath(); ctx.moveTo(0, peepY); ctx.lineTo(canvas.width, peepY); ctx.stroke();
             ctx.setLineDash([]);
             ctx.fillStyle = '#e67e22'; ctx.font = 'bold 11px Sarabun, Arial'; ctx.textAlign = 'right';
             ctx.fillText((mode === 'cpap' ? 'CPAP ' : 'PEEP ') + peep, canvas.width - 6, peepY - 4);
-
-            ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
-            ctx.beginPath(); ctx.moveTo(0, flowZeroY); ctx.lineTo(canvas.width, flowZeroY); ctx.stroke();
-            ctx.setLineDash([]);
             ctx.restore();
             ctx.textAlign = 'left';
 
@@ -1532,6 +1539,17 @@
 
                 let flowRiseSlope = Math.min(time / (slope * 4 + 0.1), 1);
 
+                // Auto-Triggering: เครื่องกระตุ้นเองซ้ำๆ จากลมรั่ว ไม่ใช่ผู้ป่วยหายใจเต็มขนาด
+                // จึงวาดเป็นลูกคลื่นเล็กๆ ถี่ๆ (คล้าย VT ต่ำในกราฟ EKG) แทนลมหายใจขนาดปกติที่แค่ถี่ขึ้น
+                let effAmplitude = amplitude;
+                let flowPeak = 70;
+                let expFlowPeak = 75;
+                if (abnormal === 'auto_trigger') {
+                    effAmplitude = amplitude * 0.25;
+                    flowPeak = 70 * 0.35;
+                    expFlowPeak = 75 * 0.35;
+                }
+
                 let isDoubleTriggerBreath = false;
                 if (abnormal === 'double_trigger') {
                     let dtStart = drawTiLength;
@@ -1548,23 +1566,20 @@
                     if(mode === 'psv' && time < 8) p_y += 12;
 
                     if (mode === 'vcv' && flowType === 'square') {
-                        if (time < drawTiLength * 0.5) {
-                            p_y = peepY - amplitude * 0.15;
-                        } else {
-                            let frac = (time - drawTiLength * 0.5) / (drawTiLength * 0.5);
-                            p_y = peepY - (0.15 + frac * 0.85) * amplitude;
-                        }
+                        // Flow คงที่ตลอด Ti -> ปริมาตรสะสมเป็นเส้นตรง ความดันจึงไต่ขึ้นเป็นเส้นตรงตลอดช่วงหายใจเข้าจนถึง peak
+                        p_y = peepY - (time / drawTiLength) * effAmplitude;
                     } else if (mode === 'vcv' && flowType === 'sine') {
-                        p_y = peepY - amplitude * (1 - Math.cos((time / drawTiLength) * Math.PI)) / 2;
+                        p_y = peepY - effAmplitude * (1 - Math.cos((time / drawTiLength) * Math.PI)) / 2;
                     } else if (mode === 'vcv') {
-                        p_y = peepY - (time / drawTiLength) * amplitude;
+                        // Flow ลดหลั่นแบบ decelerate -> ความดันไต่ขึ้นเร็วช่วงแรกแล้วเริ่มคงตัวเข้าใกล้ peak (คล้ายเส้นโค้ง exponential)
+                        p_y = peepY - effAmplitude * (1 - Math.exp(-time / 30));
                     } else {
-                        p_y = peepY - amplitude;
+                        p_y = peepY - effAmplitude;
                     }
 
-                    if (flowType === 'square') f_y = flowZeroY - 70 * flowRiseSlope;
-                    else if (flowType === 'decel') f_y = flowZeroY - (70 * flowRiseSlope) * Math.exp(-time/30);
-                    else if (flowType === 'sine') f_y = flowZeroY - Math.sin((time / drawTiLength) * Math.PI) * 70 * flowRiseSlope;
+                    if (flowType === 'square') f_y = flowZeroY - flowPeak * flowRiseSlope;
+                    else if (flowType === 'decel') f_y = flowZeroY - (flowPeak * flowRiseSlope) * Math.exp(-time/30);
+                    else if (flowType === 'sine') f_y = flowZeroY - Math.sin((time / drawTiLength) * Math.PI) * flowPeak * flowRiseSlope;
 
                     if(abnormal === 'scoop_mild') p_y += Math.sin((time / drawTiLength) * Math.PI) * 6;
                     if(abnormal === 'scoop_severe') p_y += Math.sin((time / drawTiLength) * Math.PI) * 15;
@@ -1572,12 +1587,12 @@
 
                 } else if (!isDoubleTriggerBreath) {
                     let expTime = time - drawTiLength;
-                    p_y = peepY - amplitude * Math.exp(-expTime/15);
+                    p_y = peepY - effAmplitude * Math.exp(-expTime/15);
 
                     if(abnormal === 'autopeep') { f_y = flowZeroY + 75 * Math.exp(-expTime/80); }
-                    else { f_y = flowZeroY + 75 * Math.exp(-expTime/20); }
+                    else { f_y = flowZeroY + expFlowPeak * Math.exp(-expTime/20); }
 
-                    if(abnormal === 'auto_trigger') f_y -= 15;
+                    if(abnormal === 'auto_trigger') f_y -= 5;
 
                     if(abnormal === 'premature_cycle' && expTime < 25) {
                         let pull = Math.sin(expTime * Math.PI / 25) * 35;
